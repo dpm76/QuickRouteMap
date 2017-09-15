@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">QuickRouteMap</string>
+
+    <string name="userCenterMenuItemLabel">Mi ubicación</string>
+    <string name="resetZoomMenuItemLabel">Reset zoom</string>
+    <string name="openRouteFileMenuItemLabel">Cargar ruta</string>
+</resources>

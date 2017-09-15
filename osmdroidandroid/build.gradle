@@ -1,0 +1,24 @@
+apply plugin: 'com.android.library'
+android {
+    compileSdkVersion 15
+    buildToolsVersion "25.0.1"
+
+    defaultConfig {
+        minSdkVersion 10
+        targetSdkVersion 10
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+}
+dependencies {
+    compile 'org.slf4j:slf4j-android:1.7.7'
+    compile 'org.apache.httpcomponents:httpmime:4.2.3'
+    compile 'junit:junit:4.12'
+    compile 'com.android.support:recyclerview-v7:25.3.1'
+    compile 'com.nineoldandroids:library:2.4.0'
+}

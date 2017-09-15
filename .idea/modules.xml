@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/QuickRouteMap.iml" filepath="$PROJECT_DIR$/QuickRouteMap.iml" />
+      <module fileurl="file://$PROJECT_DIR$/framework/framework.iml" filepath="$PROJECT_DIR$/framework/framework.iml" />
+      <module fileurl="file://$PROJECT_DIR$/osmdroidandroid/osmdroidandroid.iml" filepath="$PROJECT_DIR$/osmdroidandroid/osmdroidandroid.iml" />
+      <module fileurl="file://$PROJECT_DIR$/quickRouteMap/quickRouteMap.iml" filepath="$PROJECT_DIR$/quickRouteMap/quickRouteMap.iml" />
+    </modules>
+  </component>
+</project>
