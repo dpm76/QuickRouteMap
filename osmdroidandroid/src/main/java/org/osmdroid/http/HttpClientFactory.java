@@ -22,11 +22,13 @@ import org.apache.http.params.CoreProtocolPNames;
  */
 public class HttpClientFactory {
 
+	public static String userAgent = "osmdroid";
+
 	private static IHttpClientFactory mFactoryInstance = new IHttpClientFactory() {
 		@Override
 		public HttpClient createHttpClient() {
 			final DefaultHttpClient client = new DefaultHttpClient();
-			client.getParams().setParameter(CoreProtocolPNames.USER_AGENT, "osmdroid");
+			client.getParams().setParameter(CoreProtocolPNames.USER_AGENT, HttpClientFactory.userAgent);
 			return client;
 		}
 	};

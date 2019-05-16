@@ -8,6 +8,7 @@ import java.util.Locale;
 
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.api.IMapController;
+import org.osmdroid.http.HttpClientFactory;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.OverlayManager;
@@ -84,7 +85,8 @@ public class QuickRouteMapActivity extends Activity implements IGuidanceProvider
         setContentView(R.layout.main);
         
         _connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        
+
+		HttpClientFactory.userAgent = getPackageName();
         _mapView = (MapView) findViewById(R.id.mapview);
         _tilesFetcher = new TilesFetcher(_mapView);
         _tilesFetcher.FetchFinished.add(new EventDispatcher<EventArgs>() {

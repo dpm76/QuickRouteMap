@@ -13,7 +13,7 @@ import android.os.Environment;
  */
 public interface OpenStreetMapTileProviderConstants {
 
-	public static final boolean DEBUGMODE = false;
+	public static final boolean DEBUGMODE = true;
 	public static final boolean DEBUG_TILE_PROVIDERS = false;
 
 	/** Minimum Zoom Level */
@@ -28,7 +28,6 @@ public interface OpenStreetMapTileProviderConstants {
 	/** Base path for osmdroid files. Zip files are in this folder. */
 	public static final File OSMDROID_PATH = new File(Environment.getExternalStorageDirectory(),
 			"osmdroid");
-
 	/** Base path for tiles. */
 	public static final File TILE_PATH_BASE = new File(OSMDROID_PATH, "tiles");
 
@@ -36,8 +35,8 @@ public interface OpenStreetMapTileProviderConstants {
 	public static final String TILE_PATH_EXTENSION = ".tile";
 
 	/**
-	 * Initial tile cache size. The size will be increased as required by calling {@link
-	 * LRUMapTileCache.ensureCapacity(int)} The tile cache will always be at least 3x3.
+	 * Initial tile cache size. The size will be increased as required by calling
+	 * The tile cache will always be at least 3x3.
 	 */
 	public static final int CACHE_MAPTILECOUNT_DEFAULT = 9;
 
