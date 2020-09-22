@@ -2,10 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/QuickRouteMap.iml" filepath="$PROJECT_DIR$/QuickRouteMap.iml" />
-      <module fileurl="file://$PROJECT_DIR$/framework/framework.iml" filepath="$PROJECT_DIR$/framework/framework.iml" />
-      <module fileurl="file://$PROJECT_DIR$/osmdroidandroid/osmdroidandroid.iml" filepath="$PROJECT_DIR$/osmdroidandroid/osmdroidandroid.iml" />
-      <module fileurl="file://$PROJECT_DIR$/quickRouteMap/quickRouteMap.iml" filepath="$PROJECT_DIR$/quickRouteMap/quickRouteMap.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/QuickRouteMap.iml" filepath="$PROJECT_DIR$/.idea/QuickRouteMap.iml" group="QuickRouteMap" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/framework/framework.iml" filepath="$PROJECT_DIR$/.idea/modules/framework/framework.iml" group="QuickRouteMap/framework" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/osmdroidandroid/osmdroidandroid.iml" filepath="$PROJECT_DIR$/.idea/modules/osmdroidandroid/osmdroidandroid.iml" group="QuickRouteMap/osmdroidandroid" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/quickRouteMap/quickRouteMap.iml" filepath="$PROJECT_DIR$/.idea/modules/quickRouteMap/quickRouteMap.iml" group="QuickRouteMap/quickRouteMap" />
     </modules>
   </component>
 </project>

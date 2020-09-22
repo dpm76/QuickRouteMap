@@ -51,7 +51,7 @@ public class MapController implements IMapController, MapViewConstants {
 	public MapController(MapView mapView) {
 		mMapView = mapView;
 
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
 			mZoomInAnimation = ValueAnimator.ofFloat(1f, 2f);
 			mZoomInAnimation.addListener(new MyZoomAnimatorListener());
 			mZoomInAnimation.addUpdateListener(new MyZoomAnimatorUpdateListener());
@@ -166,7 +166,7 @@ public class MapController implements IMapController, MapViewConstants {
 		// We ignore the jumpToTarget for zoom levels since it doesn't make sense to stop
 		// the animation in the middle. Maybe we could have it cancel the zoom operation and jump
 		// back to original zoom level?
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
 			final Animator currentAnimator = this.mCurrentAnimator;
 			if (mMapView.mIsAnimating.get()) {
 				currentAnimator.end();
@@ -202,7 +202,7 @@ public class MapController implements IMapController, MapViewConstants {
 				return false;
 			} else {
 				mMapView.mTargetZoomLevel.set(mMapView.getZoomLevel(false) + 1);
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+				if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
 					mCurrentAnimator = mZoomInAnimation;
 					mZoomInAnimation.start();
 				} else
@@ -234,7 +234,7 @@ public class MapController implements IMapController, MapViewConstants {
 				return false;
 			} else {
 				mMapView.mTargetZoomLevel.set(mMapView.getZoomLevel(false) - 1);
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
+				if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1)
 				{
 					mCurrentAnimator = mZoomOutAnimation;
 					mZoomOutAnimation.start();
@@ -267,7 +267,7 @@ public class MapController implements IMapController, MapViewConstants {
 		mMapView.scrollTo((int) pts[0], (int) pts[1]);
 		setZoom(mMapView.mTargetZoomLevel.get());
 		mMapView.mMultiTouchScale = 1f;
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1) {
 			mCurrentAnimator = null;
 		}
 		mMapView.mIsAnimating.set(false);

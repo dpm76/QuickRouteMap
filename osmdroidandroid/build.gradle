@@ -1,7 +1,7 @@
 apply plugin: 'com.android.library'
 android {
-    compileSdkVersion 15
-    buildToolsVersion "25.0.1"
+    compileSdkVersion 10
+    buildToolsVersion "29.0.3"
 
     defaultConfig {
         minSdkVersion 10
@@ -16,9 +16,8 @@ android {
     }
 }
 dependencies {
-    compile 'org.slf4j:slf4j-android:1.7.7'
-    compile 'org.apache.httpcomponents:httpmime:4.2.3'
-    compile 'junit:junit:4.12'
-    compile 'com.android.support:recyclerview-v7:25.3.1'
-    compile 'com.nineoldandroids:library:2.4.0'
+    implementation 'org.slf4j:slf4j-android:1.7.7'
+    implementation 'org.apache.httpcomponents:httpmime:4.2.3'
+    implementation 'com.android.support:recyclerview-v7:25.3.1'
+    implementation 'com.nineoldandroids:library:2.4.0'
 }
