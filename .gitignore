@@ -55,3 +55,5 @@ freeline/
 freeline_project_description.json
 
 quickRouteMap/release
+.idea/caches
+.idea/assetWizardSettings.xml
