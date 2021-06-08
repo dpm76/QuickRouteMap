@@ -62,9 +62,15 @@ public class TileSourceFactory {
 
 	public static final OnlineTileSourceBase MAPNIK = new XYTileSource("Mapnik",
 			ResourceProxy.string.mapnik, 0, 18, 256, ".png", new String[] {
-					"https://a.tile.openstreetmap.org/",
-					"https://b.tile.openstreetmap.org/",
-					"https://c.tile.openstreetmap.org/" });
+			"http://dev.davidpm.eu/Proxy.php?target=https://a.tile.openstreetmap.org/",
+			"http://dev.davidpm.eu/Proxy.php?target=https://b.tile.openstreetmap.org/",
+			"http://dev.davidpm.eu/Proxy.php?target=https://c.tile.openstreetmap.org/" });
+
+//	public static final OnlineTileSourceBase MAPNIK = new XYTileSource("Mapnik",
+//			ResourceProxy.string.mapnik, 0, 18, 256, ".png", new String[] {
+//					"https://a.tile.openstreetmap.org/",
+//					"https://b.tile.openstreetmap.org/",
+//					"https://c.tile.openstreetmap.org/" });
 
 	public static final OnlineTileSourceBase CYCLEMAP = new XYTileSource("CycleMap",
 			ResourceProxy.string.cyclemap, 0, 17, 256, ".png", new String[] {
@@ -136,14 +142,14 @@ public class TileSourceFactory {
 	static {
 		mTileSources = new ArrayList<ITileSource>();
 		mTileSources.add(MAPNIK);
-		mTileSources.add(CYCLEMAP);
-		mTileSources.add(PUBLIC_TRANSPORT);
-		mTileSources.add(BASE);
-		mTileSources.add(TOPO);
-		mTileSources.add(HILLS);
-		mTileSources.add(CLOUDMADESTANDARDTILES);
-		mTileSources.add(CLOUDMADESMALLTILES);
-		mTileSources.add(MAPQUESTOSM);
-		mTileSources.add(MAPQUESTAERIAL);
+//		mTileSources.add(CYCLEMAP);
+//		mTileSources.add(PUBLIC_TRANSPORT);
+//		mTileSources.add(BASE);
+//		mTileSources.add(TOPO);
+//		mTileSources.add(HILLS);
+//		mTileSources.add(CLOUDMADESTANDARDTILES);
+//		mTileSources.add(CLOUDMADESMALLTILES);
+//		mTileSources.add(MAPQUESTOSM);
+//		mTileSources.add(MAPQUESTAERIAL);
 	}
 }

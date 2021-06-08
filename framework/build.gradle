@@ -16,3 +16,9 @@ android {
         }
     }
 }
+
+dependencies {
+    implementation project(path: ':osmdroidandroid')
+    implementation project(path: ':osmdroidandroid')
+    implementation project(path: ':osmdroidandroid')
+}

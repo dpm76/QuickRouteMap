@@ -2,8 +2,8 @@
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.dpm.quickroutemap"
-    android:versionCode="20200922"
-    android:versionName="0.3.3" >
+    android:versionCode="20210608"
+    android:versionName="0.3.4" >
 
 <uses-permission android:name="android.permission.INTERNET"/>
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>

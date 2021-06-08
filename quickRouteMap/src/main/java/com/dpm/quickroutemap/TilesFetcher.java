@@ -10,7 +10,9 @@ import java.util.concurrent.Executors;
 
 import microsoft.mappoint.TileSystem;
 
+import org.apache.http.params.CoreProtocolPNames;
 import org.osmdroid.api.IGeoPoint;
+import org.osmdroid.http.HttpClientFactory;
 import org.osmdroid.tileprovider.MapTile;
 import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase;
 import org.osmdroid.util.MyMath;
@@ -114,7 +116,7 @@ public final class TilesFetcher{
     	if(hasDataNetwork && 
     			(!qrmFile.exists() || 
     					((new Date().getTime() -  qrmFile.lastModified()) > STORED_TILES_TIMEOUT))){
-			FileDownloader.download(tileUrl, qrmFilePath);
+			FileDownloader.download(tileUrl, qrmFilePath, HttpClientFactory.createHttpClient());
     	}
     	
     	//Si se ha obtenido el archivo, o ya estaba, se copia a la caché de OSM

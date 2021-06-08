@@ -2,14 +2,12 @@ package com.dpm.framework;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
-
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.util.ByteArrayBuffer;
-
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.util.Log;
 
 /**
@@ -25,17 +23,32 @@ public class FileDownloader {
 	 * Descarga un archivo
 	 * @param sourceUrl Origen del archivo
 	 * @param targetFilePath Ruta local del archivo
+     * @param client HTTP client object
 	 */
-    public static void download(final String sourceUrl, final String targetFilePath) {  //this is the downloader method
+    public static void download(final String sourceUrl, final String targetFilePath, final HttpClient client) {  //this is the downloader method
 
         Log.d(LOG_TAG, String.format("Comienzo de descarga desde '%1$s' a '%2$s'", sourceUrl, targetFilePath));
     	long startTime = System.currentTimeMillis();
         
     	try {
-    		final URL url = new URL(sourceUrl);            
- 
-           
-            BufferedInputStream bis = new BufferedInputStream(url.openConnection().getInputStream());
+
+            final HttpUriRequest head = new HttpGet(sourceUrl);
+            final HttpResponse response = client.execute(head);
+
+            // Check to see if we got success
+            final org.apache.http.StatusLine line = response.getStatusLine();
+            if (line.getStatusCode() != 200) {
+                Log.w(LOG_TAG, "Problem downloading resource: " + sourceUrl + " HTTP response: " + line);
+                return;
+            }
+
+            final HttpEntity entity = response.getEntity();
+            if (entity == null) {
+                Log.w(LOG_TAG, "No content downloading resource: " + sourceUrl);
+                return;
+            }
+
+            BufferedInputStream bis = new BufferedInputStream(entity.getContent());
  
             //Read bytes to the Buffer until there is nothing more to read(-1).
             ByteArrayBuffer baf = new ByteArrayBuffer(8192);
@@ -52,22 +65,4 @@ public class FileDownloader {
         }
  
     }
-    
-    public static Bitmap getImageBitmap(String url) {
-        Bitmap bm = null;
-        try {
-            URL aURL = new URL(url);
-            URLConnection conn = aURL.openConnection();
-            conn.connect();
-            InputStream is = conn.getInputStream();
-            BufferedInputStream bis = new BufferedInputStream(is);
-            bm = BitmapFactory.decodeStream(bis);
-            bis.close();
-            is.close();
-       } catch (IOException e) {
-           Log.e(LOG_TAG, String.format("No se ha podido obtener \"%1$s\": %2$s", url, e.getMessage()));
-       }
-       return bm;
-    } 
-
 }
