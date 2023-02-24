@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Objects;
 
 import android.util.Log;
 
@@ -63,7 +64,7 @@ public class FileHelper {
          FileOutputStream fos = new FileOutputStream(createFile(filePath));
          fos.write(buffer);
          fos.close();
-         Log.v(LOG_TAG, String.format("Guardado \"%1$s\"", filePath));
+         Log.d(LOG_TAG, String.format("Guardado \"%1$s\"", filePath));
 	}
 	
 	/**
@@ -126,5 +127,29 @@ public class FileHelper {
 	    }
 	    in.close();
 	    out.close();
+	}
+
+	/**
+	 * Forces to delete a path.
+	 * In case of directory, deletes recursively.
+	 * This operation is not atomic, in the sense of
+	 * if any deletion fails, the process aborts regardeless
+	 * any other files or directory were successfully deleted.
+	 * @param path File or directory path
+	 * @return true in case of success, otherwise false
+	 */
+	public static boolean ForceDelete(String path){
+
+		File file = new File(path);
+		if(file.isFile())
+			return file.delete();
+
+		for(File childFile : Objects.requireNonNull(file.listFiles())){
+			boolean success = ForceDelete(childFile.getPath());
+			if (!success)
+				return false;
+		}
+
+		return file.delete();
 	}
 }

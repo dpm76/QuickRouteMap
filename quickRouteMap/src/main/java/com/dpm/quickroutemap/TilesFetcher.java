@@ -1,23 +1,5 @@
 package com.dpm.quickroutemap;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import microsoft.mappoint.TileSystem;
-
-import org.apache.http.params.CoreProtocolPNames;
-import org.osmdroid.api.IGeoPoint;
-import org.osmdroid.http.HttpClientFactory;
-import org.osmdroid.tileprovider.MapTile;
-import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase;
-import org.osmdroid.util.MyMath;
-import org.osmdroid.views.MapView;
-
 import android.graphics.Point;
 import android.os.Environment;
 import android.util.Log;
@@ -27,6 +9,22 @@ import com.dpm.framework.EventArgs;
 import com.dpm.framework.FileDownloader;
 import com.dpm.framework.FileHelper;
 import com.dpm.quickroutemap.navigation.Route;
+
+import org.osmdroid.api.IGeoPoint;
+import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase;
+import org.osmdroid.util.MyMath;
+import org.osmdroid.views.MapView;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import microsoft.mappoint.TileSystem;
 
 /**
  * Descarga las losetas para almacenarlas en archivos locales.
@@ -38,27 +36,47 @@ public final class TilesFetcher{
 	
 	private final static String LOG_TAG = TilesFetcher.class.getSimpleName();
 	private final static long STORED_TILES_TIMEOUT = 2592000000L; //30 días en milisegundos
-	private final static String OSM_TILES_CACHE_ROOTPATH = 
+	private final static String OSM_TILES_CACHE_ROOT_PATH =
 			Environment.getExternalStorageDirectory().getAbsolutePath() + "/osmdroid/tiles";
-	private final static String QRM_TILES_CACHE_ROOTPATH = //QRM significa Quick Route Maps
-			Environment.getExternalStorageDirectory().getAbsolutePath() + "/QuickRouteMaps/tiles";
+	private final static String QRM_TILES_CACHE_RELATIVE_PATH = "/QuickRouteMaps/tiles";
 
 	/**
 	 * Cuando avanza la descarga de mapas.
 	 * Los avances están referidos en porcentajes del total, por lo que el trabajo estará finalizado
 	 * cuando el avance total sea del 100%.
 	 */
-	public final Event<EventArgs> FetchFinished = new Event<EventArgs>();
+	public final Event<EventArgs> FetchFinished = new Event<>();
 	
 	private final MapView _mapView;
-	
-	
-	public TilesFetcher(MapView mapView){
+	private final String  _userAgent;
+	private final String _qrmTilesCacheRootPath;
+
+	/**
+	 * Creates a tile fetcher instance
+	 * @param mapView MapView instance
+	 * @param userAgent Name of the agent to be sent to the server
+	 */
+	public TilesFetcher(MapView mapView, String userAgent){
 		_mapView = mapView;
+		_userAgent = userAgent;
+		_qrmTilesCacheRootPath = Objects.requireNonNull(_mapView.getContext().getExternalFilesDir(null))
+				.getAbsolutePath() + QRM_TILES_CACHE_RELATIVE_PATH;
+	}
+
+	/**
+	 * Creates a tile fetcher instance
+	 * @param mapView MapView instance
+	 * @param userAgent Name of the agent to be sent to the server
+	 * @param qrmTilesCacheRootPath The path where tiles are stored
+	 */
+	public TilesFetcher(MapView mapView, String userAgent, String qrmTilesCacheRootPath){
+		_mapView = mapView;
+		_userAgent = userAgent;
+		_qrmTilesCacheRootPath = qrmTilesCacheRootPath;
 	}
 
     /**
-     * Precarga las losetas del mapa dentro de un área.
+     * Precarga las teselas del mapa dentro de un área.
      * @param route
      * 		El área que se descargará se ajustará a la ruta.
      * @param zoomLevel 
@@ -68,9 +86,9 @@ public final class TilesFetcher{
      */
     public void fetchTiles(final Route route, final int zoomLevel, final boolean hasDataNetwork){
     	ExecutorService executor = Executors.newSingleThreadExecutor();
-   		executor.submit(new Runnable() {
+		executor.submit(new Runnable() {
 			public void run() {
-				HashMap<String, Integer[]> tilesMap = new HashMap<String, Integer[]>();
+				final HashMap<String, Integer[]> tilesMap = new HashMap<>();
 				for(IGeoPoint waypoint: route.getWayPoints()){
 					Point pixelCoord =
 							TileSystem.LatLongToPixelXY(waypoint.getLatitudeE6() / 1E6, waypoint.getLongitudeE6() / 1E6, zoomLevel, null);
@@ -97,45 +115,40 @@ public final class TilesFetcher{
     
     private void fetchWaypointTile(int tileX, int tileY, int zoomLevel, boolean hasDataNetwork){
     	
-        MapTile tile = new MapTile(zoomLevel, tileX, tileY);
+        Log.d(LOG_TAG, String.format("Tesela (zoom=%1$d, %2$d, %3$d)", zoomLevel, tileX, tileY));
         
-        Log.v(LOG_TAG, String.format("Loseta (zoom=%1$d, %2$d, %3$d)", zoomLevel, tileX, tileY));
-        
-        OnlineTileSourceBase tileSource = (OnlineTileSourceBase)_mapView.getTileProvider().getTileSource();
-        String tileUrl = tileSource.getTileURLString(tile);
-        
-        String osmFilePath = String.format(Locale.US, "%1$s/%2$s/%3$d/%4$d/%5$d.png.tile",
-        		OSM_TILES_CACHE_ROOTPATH, tileSource.name(), zoomLevel, tileX, tileY);
-        File osmFile = new File(osmFilePath);
-        
-    	String qrmFilePath = String.format(Locale.US, "%1$s/%2$s/%3$d/%4$d/%5$d.png.tile",
-        		QRM_TILES_CACHE_ROOTPATH, tileSource.name(), zoomLevel, tileX, tileY);
-    	File qrmFile = new File(qrmFilePath);
-    	
+        final OnlineTileSourceBase tileSource = (OnlineTileSourceBase)_mapView.getTileProvider().getTileSource();
+        final String tileUrl = String.format("%s%s/%s/%s.png", tileSource.getBaseUrl(), zoomLevel, tileX, tileY);
+
+		final String qrmFilePath = String.format(Locale.US, "%1$s/%2$s/%3$d/%4$d/%5$d.png.tile",
+				_qrmTilesCacheRootPath, tileSource.name(), zoomLevel, tileX, tileY);
+    	final File qrmFile = new File(qrmFilePath);
     	//El archivo debe estar en la caché de QRM. Si no está, se descarga.
     	if(hasDataNetwork && 
     			(!qrmFile.exists() || 
     					((new Date().getTime() -  qrmFile.lastModified()) > STORED_TILES_TIMEOUT))){
-			FileDownloader.download(tileUrl, qrmFilePath, HttpClientFactory.createHttpClient());
+			FileDownloader.download(_userAgent, tileUrl, qrmFilePath);
     	}
-    	
+
     	//Si se ha obtenido el archivo, o ya estaba, se copia a la caché de OSM
     	if(qrmFile.exists()){
-    		if(!osmFile.exists() || (qrmFile.lastModified() != osmFile.lastModified())){
+			Log.d(LOG_TAG, String.format("Path to tile in QRM cache is '%1$s'", qrmFile.getAbsolutePath()));
+			final String osmFilePath = String.format(Locale.US, "%1$s/%2$s/%3$d/%4$d/%5$d.png.tile",
+					OSM_TILES_CACHE_ROOT_PATH, tileSource.name(), zoomLevel, tileX, tileY);
+			final File osmFile = new File(osmFilePath);
+    		if(!osmFile.exists() || (qrmFile.lastModified() > osmFile.lastModified())){
 		    	try {	    		
 					FileHelper.copy(qrmFile, osmFile);
-					Log.v(LOG_TAG, "Loseta copiada a la caché de OSM.");
+					Log.d(LOG_TAG, "Tesela copiada a la caché de OSM.");
 				} catch (IOException e) {
-					Log.e(LOG_TAG, String.format("No se ha podido copiar de '%1$s' a '%2$s'.", qrmFilePath, osmFilePath));
+					Log.e(LOG_TAG, String.format("No se ha podido copiar de '%1$s' a '%2$s'.", qrmFile.getAbsolutePath(), osmFilePath));
 					e.printStackTrace();
 				}   	
     		}else{
-    			Log.v(LOG_TAG, "La loseta ya está en la caché de OSM");
+    			Log.d(LOG_TAG, "La tesela ya está en la caché de OSM");
     		}
     	}else{
     		Log.w(LOG_TAG, String.format("El archivo '%1$s' no está en la caché QRM.", qrmFilePath));
     	}
-    	
     }
-   
 }

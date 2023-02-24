@@ -1,12 +1,14 @@
-apply plugin: 'com.android.library'
+plugins {
+    id 'com.android.library'
+}
 
 android {
-    compileSdkVersion 10
-    buildToolsVersion "29.0.3"
+    namespace 'com.dpm.framework'
+    compileSdk 33
 
     defaultConfig {
-        minSdkVersion 10
-        targetSdkVersion 10
+        minSdk 24
+        targetSdk 33
     }
 
     buildTypes {
@@ -18,7 +20,5 @@ android {
 }
 
 dependencies {
-    implementation project(path: ':osmdroidandroid')
-    implementation project(path: ':osmdroidandroid')
-    implementation project(path: ':osmdroidandroid')
+    implementation 'org.osmdroid:osmdroid-android:6.1.0'
 }

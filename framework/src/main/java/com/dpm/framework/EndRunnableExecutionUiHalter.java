@@ -71,7 +71,7 @@ public class EndRunnableExecutionUiHalter {
 						@Override
 						public void run() {
 							_progress += args.getIncrement();
-							Log.v(LOG_TAG, String.format("Progreso: %1$d", _progress));
+							Log.d(LOG_TAG, String.format("Progreso: %1$d", _progress));
 							if(_dialog != null && _dialog.isShowing()){
 								_dialog.setProgress(_progress);
 							}						

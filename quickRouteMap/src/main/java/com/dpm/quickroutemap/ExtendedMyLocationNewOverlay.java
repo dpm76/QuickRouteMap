@@ -1,10 +1,11 @@
 package com.dpm.quickroutemap;
 
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.Projection;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
-import org.osmdroid.views.safecanvas.ISafeCanvas;
 
 import android.content.Context;
+import android.graphics.Canvas;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -24,24 +25,24 @@ public class ExtendedMyLocationNewOverlay extends MyLocationNewOverlay implement
 	
 	private float[] _gravity;
 	private float[] _geomagnetic;
-	private float _azimut;
+	private float _azimuth;
 	
 	public ExtendedMyLocationNewOverlay(Context context, MapView mapView) {
 		
-		super(context, mapView);	
+		super(mapView);
 		_display = ((WindowManager)context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
 		_sensorManager = (SensorManager)context.getSystemService(Context.SENSOR_SERVICE);
 	    _accelerometer = _sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 	    _magnetometer = _sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 	}
-	
+
 	@Override
-	protected void drawMyLocation(ISafeCanvas canvas, MapView mapView, Location lastFix) {
+	protected void drawMyLocation(Canvas canvas, Projection projection, Location lastFix) {
 		
 		float orientation = getCurrentOrientation();
 		lastFix.setBearing(orientation);
 		
-		super.drawMyLocation(canvas, mapView, lastFix);		
+		super.drawMyLocation(canvas, projection, lastFix);
 	}
 	
 	/**
@@ -52,8 +53,8 @@ public class ExtendedMyLocationNewOverlay extends MyLocationNewOverlay implement
 	private float getCurrentOrientation(){
 		
 		float offset;
-		
-		switch(_display.getRotation()){
+
+		switch (_display.getRotation()) {
 			case Surface.ROTATION_90:
 				offset = 90f;
 				break;
@@ -62,13 +63,14 @@ public class ExtendedMyLocationNewOverlay extends MyLocationNewOverlay implement
 				break;
 			case Surface.ROTATION_270:
 				offset = 270f;
-				break;				
+				break;
+			case Surface.ROTATION_0:
 			default:
 				offset = 0f;
 				break;
 		}
 		
-		return _azimut + offset;
+		return _azimuth + offset;
 	}
 	
 	@Override
@@ -108,15 +110,15 @@ public class ExtendedMyLocationNewOverlay extends MyLocationNewOverlay implement
 		
 		if (_gravity != null && _geomagnetic != null) {
 		    	
-	    	float R[] = new float[9];
-	    	float I[] = new float[9];
+	    	float[] R = new float[9];
+	    	float[] I = new float[9];
 	    	
 	    	boolean success = SensorManager.getRotationMatrix(R, I, _gravity, _geomagnetic);
 	    	if (success) {
 	    		
-	    		float orientation[] = new float[3];
+	    		float[] orientation = new float[3];
 	    		SensorManager.getOrientation(R, orientation);
-	    		_azimut = (float)(((double)orientation[0])*180d/Math.PI); // orientation contains: azimut (yaw), pitch and roll
+	    		_azimuth = (float)(((double)orientation[0])*180d/Math.PI); // orientation contains: azimut (yaw), pitch and roll
 	    		mMapView.invalidate();
 	    	}
 		}

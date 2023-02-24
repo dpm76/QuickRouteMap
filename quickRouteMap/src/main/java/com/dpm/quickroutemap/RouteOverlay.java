@@ -23,11 +23,10 @@ import android.graphics.Point;
 public class RouteOverlay extends Overlay {
 
 	private final Route _route;
-	private Paint _paint = new Paint();
+	private final Paint _paint = new Paint();
 	
-	public RouteOverlay(Context context, Route route, int color, float width) {
-		super(context);
-		
+	public RouteOverlay(Route route, int color, float width) {
+
 		_paint.setColor(color);
 		_paint.setStrokeWidth(width);
 		_paint.setAntiAlias(true);
@@ -36,7 +35,7 @@ public class RouteOverlay extends Overlay {
 	}
 	
 	@Override
-	protected void draw(Canvas canvas, MapView mapView, boolean isShadow) {
+	public void draw(Canvas canvas, MapView mapView, boolean isShadow) {
 		if(!isShadow && (_route != null) && (_route.getWayPoints().size()>1)){
 			
 			List<IGeoPoint> wayPoints = _route.getWayPoints();
@@ -44,15 +43,15 @@ public class RouteOverlay extends Overlay {
 			Point screenPoint = new Point();			
 			Path path = new Path();
 			
-			mapView.getProjection().toMapPixels(wayPoints.get(0), screenPoint);
+			mapView.getProjection().toPixels(wayPoints.get(0), screenPoint);
 			path.moveTo(screenPoint.x, screenPoint.y);
 			
 			for(int i = 1; i < wayPoints.size(); i++){
-				mapView.getProjection().toMapPixels(wayPoints.get(i), screenPoint);
+				mapView.getProjection().toPixels(wayPoints.get(i), screenPoint);
 				path.lineTo(screenPoint.x, screenPoint.y);
 			}
 			if(_route.isClosed()){
-				mapView.getProjection().toMapPixels(wayPoints.get(0), screenPoint);
+				mapView.getProjection().toPixels(wayPoints.get(0), screenPoint);
 				path.lineTo(screenPoint.x, screenPoint.y);
 			}
 			

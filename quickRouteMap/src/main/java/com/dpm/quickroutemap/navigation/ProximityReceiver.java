@@ -29,7 +29,7 @@ public final class ProximityReceiver extends BroadcastReceiver {
 	
 	@Override
 	public void onReceive(Context context, Intent intent) {
-		Log.v(LOG_TAG, "Alerta de proximidad");
+		Log.d(LOG_TAG, "Alerta de proximidad");
 		Bundle extras = intent.getExtras();
   	    if((extras != null) 
   	    		&& intent.hasExtra(GUIDANCE_POINT_KEY) 
