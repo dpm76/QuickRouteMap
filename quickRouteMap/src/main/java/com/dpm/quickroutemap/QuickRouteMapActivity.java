@@ -2,7 +2,6 @@ package com.dpm.quickroutemap;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -30,6 +29,7 @@ import com.google.gson.JsonIOException;
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
+import org.osmdroid.config.IConfigurationProvider;
 import org.osmdroid.tileprovider.MapTileProviderBasic;
 import org.osmdroid.tileprovider.modules.TileWriter;
 import org.osmdroid.tileprovider.tilesource.XYTileSource;
@@ -39,6 +39,7 @@ import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.OverlayManager;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
@@ -49,10 +50,10 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
     private final String LOG_TAG = QuickRouteMapActivity.class.getSimpleName();
 
-    private final static String DEFAULT_ROUTE_FILEPATH = "/data/ruta.txt";
+    private final static String DEFAULT_ROUTE_FILEPATH = "/routes/_route.json";
 
     private final static double DEFAULT_ZOOM = 12d;
-    private static final int PICKFILE_RESULT_CODE = 1;
+    private static final int PICK_FILE_RESULT_CODE = 1;
 
     private final static String IS_ZOOM_KEY = "zoom";
     private final static String IS_CENTER_LON_KEY = "center_lon";
@@ -81,14 +82,22 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
     private final Invoker _invoker = new Invoker();
 
-    /** Called when the activity is first created. */
+    /**
+     * Called when the activity is first created.
+     */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        IConfigurationProvider mapConfig = Configuration.getInstance();
+        mapConfig.setUserAgentValue(getPackageName());
+        File osmBasePath = new File(getBaseContext().getFilesDir().getAbsolutePath() + "/osmdroid");
+        mapConfig.setOsmdroidBasePath(osmBasePath);
+        Log.d(LOG_TAG, String.format("OSM-base-path: '%1$s'", mapConfig.getOsmdroidBasePath().getAbsolutePath()));
+
         setContentView(R.layout.main);
 
         _connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        Configuration.getInstance().setUserAgentValue(getPackageName());
+
         _mapView = findViewById(R.id.mapview);
         // Force to use the file cache instead the default database cache
         _mapView.setTileProvider(new MapTileProviderBasic(this,
@@ -100,72 +109,74 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                 }),
                 new TileWriter()));
         //_mapView.setUseDataConnection(false); // Uncomment to debug without connection
-        _tilesFetcher = new TilesFetcher(_mapView, getPackageName());
+        _tilesFetcher = new TilesFetcher(_mapView, getPackageName(),
+                getBaseContext().getFilesDir().getAbsolutePath() + "/tiles",
+                mapConfig.getOsmdroidTileCache().getAbsolutePath());
         _tilesFetcher.FetchFinished.add((arg0, arg1) -> runOnUiThread(this::onFetchFinished));
-        
+
         _mapView.getZoomController().setVisibility(CustomZoomButtonsController.Visibility.SHOW_AND_FADEOUT);
         _mapView.setMultiTouchControls(this.getApplication().getPackageManager()
                 .hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN_MULTITOUCH));
-        
+
         _mapController = _mapView.getController();
         _mapOverlayManager = _mapView.getOverlayManager();
-        
+
         _myLocationOverlay = new ExtendedMyLocationNewOverlay(this, _mapView);
         _mapOverlayManager.add(_myLocationOverlay);
-        
+
         _mapController.setZoom(DEFAULT_ZOOM);
 
         //Iniciar TTS
         _tts = new TextToSpeech(getApplicationContext(),
                 status -> {
-                    if(status != TextToSpeech.ERROR){
+                    if (status != TextToSpeech.ERROR) {
                         _tts.setLanguage(new Locale("es", "ES"));
                     }
                 });
-        
+
         _proximityManager = new GuidancePointProximityManager(this, _tts, this);
-        
+
         //Iniciar serializador
         _routeSerializer = new GsonBuilder()
                 .registerTypeAdapter(IGeoPoint.class, new GeoPointSerializer())
                 .create();
-        
+
         saveState();
     }
-    
-    private void saveState(){
+
+    private void saveState() {
         Log.d(LOG_TAG, "saveState()");
 
         _instanceState.putDouble(IS_ZOOM_KEY, _mapView.getZoomLevelDouble());
         IGeoPoint center = _mapView.getMapCenter();
         int lon = center.getLongitudeE6();
         int lat = center.getLatitudeE6();
-        if(lon != 0 && lat != 0){
+        if (lon != 0 && lat != 0) {
             _instanceState.putInt(IS_CENTER_LON_KEY, center.getLongitudeE6());
             _instanceState.putInt(IS_CENTER_LAT_KEY, center.getLatitudeE6());
         }
     }
 
-    private void restoreState(){
-        Log.d(LOG_TAG,"restoreState()");
-        
-        if(_instanceState.containsKey(IS_ZOOM_KEY)){
+    private void restoreState() {
+        Log.d(LOG_TAG, "restoreState()");
+
+        if (_instanceState.containsKey(IS_ZOOM_KEY)) {
             _mapController.setZoom(_instanceState.getDouble(IS_ZOOM_KEY, DEFAULT_ZOOM));
         }
-        
-        if(_instanceState.containsKey(IS_CENTER_LAT_KEY) &&
-                _instanceState.containsKey(IS_CENTER_LON_KEY)){
+
+        if (_instanceState.containsKey(IS_CENTER_LAT_KEY) &&
+                _instanceState.containsKey(IS_CENTER_LON_KEY)) {
 
             _mapController.setCenter(new GeoPoint(
                     _instanceState.getInt(IS_CENTER_LAT_KEY),
                     _instanceState.getInt(IS_CENTER_LON_KEY)));
-        }        
-       
-        showRoute();       
+        }
+
+        showRoute();
     }
-    
+
     @Override
-    protected void onResume(){
+    protected void onResume() {
         super.onResume();
         Log.d(LOG_TAG, "onResume()");
         restoreState();
@@ -174,7 +185,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     }
 
     @Override
-    protected void onPause(){
+    protected void onPause() {
         super.onPause();
         Log.d(LOG_TAG, "onPause()");
         _myLocationOverlay.disableMyLocation();
@@ -183,7 +194,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     }
 
     @Override
-    protected void onDestroy(){
+    protected void onDestroy() {
         _tts.stop();
         _tts.shutdown();
         _proximityManager.close();
@@ -191,13 +202,13 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         super.onDestroy();
     }
 
-    private void clear(){
+    private void clear() {
 
         _mapOverlayManager.removeAll(_routeOverlaysMap.values());
         _routeOverlaysMap.clear();
     }
 
-    private void loadRoute(BufferedReader reader){
+    private void loadRoute(BufferedReader reader) {
 
         Log.d(LOG_TAG, "loadRoute()");
         clear();
@@ -214,12 +225,12 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
             NetworkInfo networkInfo = _connectivityManager.getActiveNetworkInfo();
             _hasDataNetwork = (networkInfo != null) && networkInfo.isConnected();
-            if(_hasDataNetwork){
+            if (_hasDataNetwork) {
                 Toast.makeText(this, "Descargando mapas...", Toast.LENGTH_SHORT).show();
-            }else{
+            } else {
                 Toast.makeText(this, "Modo sin conexión", Toast.LENGTH_SHORT).show();
             }
-            _tilesFetcher.fetchTiles(_currentRoute, (int)DEFAULT_ZOOM, _hasDataNetwork);
+            _tilesFetcher.fetchTiles(_currentRoute, (int) DEFAULT_ZOOM, _hasDataNetwork);
 
             IGeoPoint center = _currentRoute.getWayPoints().get(0);
             _mapController.setCenter(center);
@@ -228,11 +239,11 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         }
     }
 
-    private void showRoute(){
+    private void showRoute() {
 
-        if(_currentRoute != null){
+        if (_currentRoute != null) {
 
-            RouteOverlay routeOverlay = new RouteOverlay( _currentRoute, 0xa0ff6010, 4f);
+            RouteOverlay routeOverlay = new RouteOverlay(_currentRoute, 0xa0ff6010, 4f);
             _routeOverlaysMap.put(_currentRoute.getKey(), routeOverlay);
             _mapOverlayManager.add(0, routeOverlay);
         }
@@ -252,7 +263,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         boolean handled = true;
 
         Log.d(LOG_TAG, Objects.requireNonNull(item.getTitle()).toString());
-        switch (item.getItemId()){
+        switch (item.getItemId()) {
             case R.id.userCenterMenuItem:
                 centerAtUserLocation();
                 break;
@@ -269,45 +280,53 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         return handled;
     }
 
-    private void centerAtUserLocation(){
+    private void centerAtUserLocation() {
 
         GeoPoint userLocation = _myLocationOverlay.getMyLocation();
 
-        if(userLocation != null){
+        if (userLocation != null) {
             Log.d(LOG_TAG, String.format("Centrando en posición del usuario en %1$s", userLocation));
             _mapController.setCenter(userLocation);
-        }else{
+        } else {
             Log.w(LOG_TAG, "Posición de usuario Null");
         }
     }
 
     private void onFetchFinished() {
 
-        if(_hasDataNetwork){
+        if (_hasDataNetwork) {
             new AlertDialog.Builder(this)
-                .setTitle("Descarga finalizada")
-                .setMessage("Descarga de mapas finalizada")
-                .setPositiveButton(android.R.string.ok, null)
-                .show();
+                    .setTitle("Descarga finalizada")
+                    .setMessage("Descarga de mapas finalizada")
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
             //_tts.speak("Descarga de mapas finalizada.", TextToSpeech.QUEUE_ADD, null);
-        }else{
+        } else {
             Toast.makeText(this, "Copiado de mapas finalizado", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void launchRouteFileBrowser(){
-        Intent fileintent = new Intent(Intent.ACTION_GET_CONTENT);
-        fileintent.addCategory(Intent.CATEGORY_OPENABLE);
-        fileintent.setType("text/*");
-        try {
-            startActivityForResult(fileintent, PICKFILE_RESULT_CODE);
-        } catch (ActivityNotFoundException e) {
-            Log.w(LOG_TAG, String.format("No se ha podido lanzar el navegador de archivos. Se usa el archivo por defecto: \"%s\"", DEFAULT_ROUTE_FILEPATH));
-            loadRoute(DEFAULT_ROUTE_FILEPATH);
+    private void launchRouteFileBrowser() {
+//        Intent fileintent = new Intent(Intent.ACTION_GET_CONTENT);
+//        fileintent.addCategory(Intent.CATEGORY_OPENABLE);
+//        fileintent.setType("text/*");
+//        try {
+//            startActivityForResult(fileintent, PICKFILE_RESULT_CODE);
+//        } catch (ActivityNotFoundException e) {
+//            Log.w(LOG_TAG, String.format("No se ha podido lanzar el navegador de archivos. Se usa el archivo por defecto: \"%s\"", DEFAULT_ROUTE_FILEPATH));
+//            loadRoute(DEFAULT_ROUTE_FILEPATH);
+//        }
+        String routeFilePath = String.format("%1$s%2$s", getBaseContext().getFilesDir().getAbsolutePath(), DEFAULT_ROUTE_FILEPATH);
+        if (!new File(routeFilePath).exists()) {
+            Log.w(LOG_TAG, String.format("File '%1$s' doesn't exist!", routeFilePath));
+            Toast.makeText(this, "Route file not found!",
+                    Toast.LENGTH_SHORT).show();
+            return;
         }
+        loadRoute(routeFilePath);
     }
 
-    private void loadRoute(String path){
+    private void loadRoute(String path) {
 
         try {
             FileInputStream fis = new FileInputStream(path);
@@ -319,15 +338,15 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (data != null && requestCode == PICKFILE_RESULT_CODE && resultCode == RESULT_OK){
+        if (data != null && requestCode == PICK_FILE_RESULT_CODE && resultCode == RESULT_OK) {
             String filePath = Objects.requireNonNull(data.getData()).getPath();
             _invoker.invoke(
-                new ParametrizedRunnable(new Object[]{filePath}){
-                    public void run() {
-                        String filePath = (String)_params[0];
-                        loadRoute(filePath);
+                    new ParametrizedRunnable(new Object[]{filePath}) {
+                        public void run() {
+                            String filePath = (String) _params[0];
+                            loadRoute(filePath);
+                        }
                     }
-                }
             );
         }
     }

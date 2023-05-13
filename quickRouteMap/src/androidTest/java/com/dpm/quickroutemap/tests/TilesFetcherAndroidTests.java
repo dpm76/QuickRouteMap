@@ -1,4 +1,4 @@
-package com.dpm.quickroutemap.navigation;
+package com.dpm.quickroutemap.tests;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -8,6 +8,8 @@ import androidx.test.filters.LargeTest;
 
 import com.dpm.framework.FileHelper;
 import com.dpm.quickroutemap.TilesFetcher;
+import com.dpm.quickroutemap.navigation.GeoPointSerializer;
+import com.dpm.quickroutemap.navigation.Route;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -365,10 +367,11 @@ public class TilesFetcherAndroidTests {
         final Route route = serializer.fromJson(jsonRoute, Route.class);
 
         final String packageName = Objects.requireNonNull(this.getClass().getPackage()).getName();
-        final String rootPath = "/storage/emulated/0/" + packageName;
-        final String qrmTilesCacheRootPath =  rootPath + "/tiles";
+        final String rootPath = "/data/user/0/com.dpm.quickroutemap/test";
+        final String qrmTilesCacheRootPath =  rootPath + "/qrm-tiles";
+        final String osmTilesCacheRootPath =  rootPath + "/osm-tiles";
 
-        TilesFetcher tilesFetcher = new TilesFetcher(mapView, packageName, qrmTilesCacheRootPath);
+        TilesFetcher tilesFetcher = new TilesFetcher(mapView, packageName, qrmTilesCacheRootPath, osmTilesCacheRootPath);
 
         final AtomicBoolean finished = new AtomicBoolean(false);
         tilesFetcher.FetchFinished.add((o, args) ->  finished.set(true));

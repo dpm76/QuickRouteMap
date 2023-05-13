@@ -63,10 +63,10 @@ public class FileDownloaderAndroidTest {
     }
 
     @Test
-    public void tileUrl_downloadFile_dreatesTileFile() {
+    public void tileUrl_downloadFile_createsTileFile() {
 
         final String  packageName = Objects.requireNonNull(getClass().getPackage()).getName();
-        final String rootPath = String.format("/storage/emulated/0/Android/data/%1$s/files/tiles",
+        final String rootPath = String.format("/sdcard/Android/data/%1$s/files/tiles",
                 packageName);
         final String filePath = String.format("%1$s/tile-test.png", rootPath);
         final String sourceUrl = "https://b.tile.openstreetmap.org/12/2137/1417.png";

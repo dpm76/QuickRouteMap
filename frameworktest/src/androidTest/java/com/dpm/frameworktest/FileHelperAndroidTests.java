@@ -25,7 +25,7 @@ public class FileHelperAndroidTests {
     @Test
     public void givenAPath_writeFile_fileIsWritten(){
 
-        final String rootPath = "/storage/emulated/0/" + getClass().getPackage().getName();
+        final String rootPath = "/sdcard/Android/data/" + getClass().getPackage().getName();
         final String path = rootPath + "/tiles/12/123/";
         final String fileName = "test.txt";
         final String fileContent = "abcde1234";

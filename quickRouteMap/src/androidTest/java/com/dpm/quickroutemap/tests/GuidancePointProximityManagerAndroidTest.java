@@ -1,4 +1,4 @@
-package com.dpm.quickroutemap.navigation;
+package com.dpm.quickroutemap.tests;
 
 import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentation;
 
@@ -7,6 +7,10 @@ import android.speech.tts.TextToSpeech;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
+
+import com.dpm.quickroutemap.navigation.GuidancePoint;
+import com.dpm.quickroutemap.navigation.GuidancePointProximityManager;
+import com.dpm.quickroutemap.navigation.IGuidanceProvider;
 
 import org.junit.After;
 import org.junit.Assert;

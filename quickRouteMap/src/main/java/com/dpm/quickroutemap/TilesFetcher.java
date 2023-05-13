@@ -36,8 +36,6 @@ public final class TilesFetcher{
 	
 	private final static String LOG_TAG = TilesFetcher.class.getSimpleName();
 	private final static long STORED_TILES_TIMEOUT = 2592000000L; //30 días en milisegundos
-	private final static String OSM_TILES_CACHE_ROOT_PATH =
-			Environment.getExternalStorageDirectory().getAbsolutePath() + "/osmdroid/tiles";
 	private final static String QRM_TILES_CACHE_RELATIVE_PATH = "/QuickRouteMaps/tiles";
 
 	/**
@@ -50,29 +48,20 @@ public final class TilesFetcher{
 	private final MapView _mapView;
 	private final String  _userAgent;
 	private final String _qrmTilesCacheRootPath;
+	private final String _osmTilesCacheRootPath;
 
 	/**
 	 * Creates a tile fetcher instance
 	 * @param mapView MapView instance
 	 * @param userAgent Name of the agent to be sent to the server
+	 * @param qrmTilesCacheRootPath The path where tiles are pre-cached
+	 * @param osmTilesCacheRootPath The path where OSMDroid stores the tiles
 	 */
-	public TilesFetcher(MapView mapView, String userAgent){
-		_mapView = mapView;
-		_userAgent = userAgent;
-		_qrmTilesCacheRootPath = Objects.requireNonNull(_mapView.getContext().getExternalFilesDir(null))
-				.getAbsolutePath() + QRM_TILES_CACHE_RELATIVE_PATH;
-	}
-
-	/**
-	 * Creates a tile fetcher instance
-	 * @param mapView MapView instance
-	 * @param userAgent Name of the agent to be sent to the server
-	 * @param qrmTilesCacheRootPath The path where tiles are stored
-	 */
-	public TilesFetcher(MapView mapView, String userAgent, String qrmTilesCacheRootPath){
+	public TilesFetcher(MapView mapView, String userAgent, String qrmTilesCacheRootPath, String osmTilesCacheRootPath){
 		_mapView = mapView;
 		_userAgent = userAgent;
 		_qrmTilesCacheRootPath = qrmTilesCacheRootPath;
+		_osmTilesCacheRootPath = osmTilesCacheRootPath;
 	}
 
     /**
@@ -134,7 +123,7 @@ public final class TilesFetcher{
     	if(qrmFile.exists()){
 			Log.d(LOG_TAG, String.format("Path to tile in QRM cache is '%1$s'", qrmFile.getAbsolutePath()));
 			final String osmFilePath = String.format(Locale.US, "%1$s/%2$s/%3$d/%4$d/%5$d.png.tile",
-					OSM_TILES_CACHE_ROOT_PATH, tileSource.name(), zoomLevel, tileX, tileY);
+					_osmTilesCacheRootPath, tileSource.name(), zoomLevel, tileX, tileY);
 			final File osmFile = new File(osmFilePath);
     		if(!osmFile.exists() || (qrmFile.lastModified() > osmFile.lastModified())){
 		    	try {	    		
