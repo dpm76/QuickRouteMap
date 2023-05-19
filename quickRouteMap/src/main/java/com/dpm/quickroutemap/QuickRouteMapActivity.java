@@ -42,7 +42,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -50,7 +53,8 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
     private final String LOG_TAG = QuickRouteMapActivity.class.getSimpleName();
 
-    private final static String DEFAULT_ROUTE_FILEPATH = "/routes/_route.json";
+    private final static String ROUTES_DIR_PATH = "/routes/";
+    private final static String FILE_EXTENSION_JSON = ".json";
 
     private final static double DEFAULT_ZOOM = 12d;
     private static final int PICK_FILE_RESULT_CODE = 1;
@@ -82,6 +86,11 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
     private final Invoker _invoker = new Invoker();
 
+    private String getDataPath(){
+
+        return getBaseContext().getFilesDir().getAbsolutePath();
+    }
+
     /**
      * Called when the activity is first created.
      */
@@ -90,7 +99,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         super.onCreate(savedInstanceState);
         IConfigurationProvider mapConfig = Configuration.getInstance();
         mapConfig.setUserAgentValue(getPackageName());
-        File osmBasePath = new File(getBaseContext().getFilesDir().getAbsolutePath() + "/osmdroid");
+        File osmBasePath = new File(getDataPath() + "/osmdroid");
         mapConfig.setOsmdroidBasePath(osmBasePath);
         Log.d(LOG_TAG, String.format("OSM-base-path: '%1$s'", mapConfig.getOsmdroidBasePath().getAbsolutePath()));
 
@@ -110,7 +119,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                 new TileWriter()));
         //_mapView.setUseDataConnection(false); // Uncomment to debug without connection
         _tilesFetcher = new TilesFetcher(_mapView, getPackageName(),
-                getBaseContext().getFilesDir().getAbsolutePath() + "/tiles",
+                getDataPath() + "/tiles",
                 mapConfig.getOsmdroidTileCache().getAbsolutePath());
         _tilesFetcher.FetchFinished.add((arg0, arg1) -> runOnUiThread(this::onFetchFinished));
 
@@ -239,6 +248,17 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         }
     }
 
+    private void loadRoute(String path) {
+
+        try {
+            FileInputStream fis = new FileInputStream(path);
+            loadRoute(new BufferedReader(new InputStreamReader(fis)));
+            fis.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     private void showRoute() {
 
         if (_currentRoute != null) {
@@ -307,34 +327,40 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     }
 
     private void launchRouteFileBrowser() {
-//        Intent fileintent = new Intent(Intent.ACTION_GET_CONTENT);
-//        fileintent.addCategory(Intent.CATEGORY_OPENABLE);
-//        fileintent.setType("text/*");
-//        try {
-//            startActivityForResult(fileintent, PICKFILE_RESULT_CODE);
-//        } catch (ActivityNotFoundException e) {
-//            Log.w(LOG_TAG, String.format("No se ha podido lanzar el navegador de archivos. Se usa el archivo por defecto: \"%s\"", DEFAULT_ROUTE_FILEPATH));
-//            loadRoute(DEFAULT_ROUTE_FILEPATH);
-//        }
-        String routeFilePath = String.format("%1$s%2$s", getBaseContext().getFilesDir().getAbsolutePath(), DEFAULT_ROUTE_FILEPATH);
+
+        File routesDir = new File(getDataPath() + ROUTES_DIR_PATH);
+        ArrayList<String> routePathList = new ArrayList<>();
+        for (File routeFile : Objects.requireNonNull(routesDir.listFiles((dir, name) -> name.endsWith(FILE_EXTENSION_JSON)))){
+
+            routePathList.add(routeFile.getName());
+        }
+
+        if(routePathList.size() != 0) {
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.selectRoute)
+                    .setNegativeButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())
+                    .setItems(routePathList.toArray(new String[routePathList.size()]), (dialog, which)
+                            -> onRouteSelected(Collections.unmodifiableList(routePathList), which))
+                    .create().show();
+        } else {
+            new AlertDialog.Builder(this)
+                    .setMessage(R.string.noRouteMessage)
+                    .setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss())
+                    .create().show();
+        }
+    }
+
+    private void onRouteSelected(List<String> routePathList,  int which){
+
+        String routeName = routePathList.get(which);
+        Log.d(LOG_TAG, String.format("Selected route: '%1$s'", routeName));
+        String routeFilePath = String.format("%1$s%2$s%3$s", getDataPath(), ROUTES_DIR_PATH, routeName);
         if (!new File(routeFilePath).exists()) {
             Log.w(LOG_TAG, String.format("File '%1$s' doesn't exist!", routeFilePath));
-            Toast.makeText(this, "Route file not found!",
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Route file not found!", Toast.LENGTH_SHORT).show();
             return;
         }
         loadRoute(routeFilePath);
-    }
-
-    private void loadRoute(String path) {
-
-        try {
-            FileInputStream fis = new FileInputStream(path);
-            loadRoute(new BufferedReader(new InputStreamReader(fis)));
-            fis.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
