@@ -54,6 +54,8 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private final static String FILE_EXTENSION_JSON = ".json";
 
     private final static double DEFAULT_ZOOM = 12d;
+    private final int ROUTE_COLOR = 0xa0ff6010;
+    private final float ROUTE_WIDTH = 12f;
 
     private final static String INTERNAL_STATE_ZOOM_KEY = "zoom";
     private final static String INTERNAL_STATE_CENTER_LON_KEY = "center_lon";
@@ -254,7 +256,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
         if (_currentRoute != null) {
 
-            RouteOverlay routeOverlay = new RouteOverlay(_currentRoute, 0xa0ff6010, 4f);
+            RouteOverlay routeOverlay = new RouteOverlay(_currentRoute, ROUTE_COLOR, ROUTE_WIDTH);
             _routeOverlaysMap.put(_currentRoute.getKey(), routeOverlay);
             _mapOverlayManager.add(0, routeOverlay);
         }
