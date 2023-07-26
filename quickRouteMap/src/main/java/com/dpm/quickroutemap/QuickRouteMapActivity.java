@@ -3,7 +3,6 @@ package com.dpm.quickroutemap;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -15,8 +14,6 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-import com.dpm.framework.Invoker;
-import com.dpm.framework.ParametrizedRunnable;
 import com.dpm.quickroutemap.navigation.GeoPointSerializer;
 import com.dpm.quickroutemap.navigation.GuidancePoint;
 import com.dpm.quickroutemap.navigation.GuidancePointProximityManager;
@@ -57,12 +54,10 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private final static String FILE_EXTENSION_JSON = ".json";
 
     private final static double DEFAULT_ZOOM = 12d;
-    private static final int PICK_FILE_RESULT_CODE = 1;
 
-    private final static String IS_ZOOM_KEY = "zoom";
-    private final static String IS_CENTER_LON_KEY = "center_lon";
-    private final static String IS_CENTER_LAT_KEY = "center_lat";
-    //private final static String IS_ROUTE = "route";
+    private final static String INTERNAL_STATE_ZOOM_KEY = "zoom";
+    private final static String INTERNAL_STATE_CENTER_LON_KEY = "center_lon";
+    private final static String INTERNAL_STATE_CENTER_LAT_KEY = "center_lat";
     private static Route _currentRoute; //TODO La ruta se debe guardar en _instanceState para recuperarla en onResume()
 
     //Se ha tenido que añadir el estado de forma explícita porque no llama a onRestoreInstanceState()
@@ -83,8 +78,6 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private GuidancePointProximityManager _proximityManager;
     private TextToSpeech _tts;
     private Gson _routeSerializer;
-
-    private final Invoker _invoker = new Invoker();
 
     private String getDataPath(){
 
@@ -156,29 +149,29 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private void saveState() {
         Log.d(LOG_TAG, "saveState()");
 
-        _instanceState.putDouble(IS_ZOOM_KEY, _mapView.getZoomLevelDouble());
+        _instanceState.putDouble(INTERNAL_STATE_ZOOM_KEY, _mapView.getZoomLevelDouble());
         IGeoPoint center = _mapView.getMapCenter();
-        int lon = center.getLongitudeE6();
-        int lat = center.getLatitudeE6();
-        if (lon != 0 && lat != 0) {
-            _instanceState.putInt(IS_CENTER_LON_KEY, center.getLongitudeE6());
-            _instanceState.putInt(IS_CENTER_LAT_KEY, center.getLatitudeE6());
+        double longitude = center.getLongitude();
+        double latitude = center.getLatitude();
+        if (longitude != 0 && latitude != 0) {
+            _instanceState.putDouble(INTERNAL_STATE_CENTER_LON_KEY, longitude);
+            _instanceState.putDouble(INTERNAL_STATE_CENTER_LAT_KEY, latitude);
         }
     }
 
     private void restoreState() {
         Log.d(LOG_TAG, "restoreState()");
 
-        if (_instanceState.containsKey(IS_ZOOM_KEY)) {
-            _mapController.setZoom(_instanceState.getDouble(IS_ZOOM_KEY, DEFAULT_ZOOM));
+        if (_instanceState.containsKey(INTERNAL_STATE_ZOOM_KEY)) {
+            _mapController.setZoom(_instanceState.getDouble(INTERNAL_STATE_ZOOM_KEY, DEFAULT_ZOOM));
         }
 
-        if (_instanceState.containsKey(IS_CENTER_LAT_KEY) &&
-                _instanceState.containsKey(IS_CENTER_LON_KEY)) {
+        if (_instanceState.containsKey(INTERNAL_STATE_CENTER_LAT_KEY) &&
+                _instanceState.containsKey(INTERNAL_STATE_CENTER_LON_KEY)) {
 
             _mapController.setCenter(new GeoPoint(
-                    _instanceState.getInt(IS_CENTER_LAT_KEY),
-                    _instanceState.getInt(IS_CENTER_LON_KEY)));
+                    _instanceState.getDouble(INTERNAL_STATE_CENTER_LAT_KEY),
+                    _instanceState.getDouble(INTERNAL_STATE_CENTER_LON_KEY)));
         }
 
         showRoute();
@@ -190,7 +183,6 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         Log.d(LOG_TAG, "onResume()");
         restoreState();
         _myLocationOverlay.enableMyLocation();
-        //_myLocationOverlay.enableCompass();
     }
 
     @Override
@@ -198,7 +190,6 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         super.onPause();
         Log.d(LOG_TAG, "onPause()");
         _myLocationOverlay.disableMyLocation();
-        //_myLocationOverlay.disableCompass();
         saveState();
     }
 
@@ -330,9 +321,12 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
         File routesDir = new File(getDataPath() + ROUTES_DIR_PATH);
         ArrayList<String> routePathList = new ArrayList<>();
-        for (File routeFile : Objects.requireNonNull(routesDir.listFiles((dir, name) -> name.endsWith(FILE_EXTENSION_JSON)))){
+        File [] routeFiles = routesDir.listFiles((dir, name) -> name.endsWith(FILE_EXTENSION_JSON));
+        if (routeFiles != null && routeFiles.length != 0) {
+            for (File routeFile : Objects.requireNonNull(routeFiles)) {
 
-            routePathList.add(routeFile.getName());
+                routePathList.add(routeFile.getName());
+            }
         }
 
         if(routePathList.size() != 0) {
@@ -361,20 +355,6 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
             return;
         }
         loadRoute(routeFilePath);
-    }
-
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (data != null && requestCode == PICK_FILE_RESULT_CODE && resultCode == RESULT_OK) {
-            String filePath = Objects.requireNonNull(data.getData()).getPath();
-            _invoker.invoke(
-                    new ParametrizedRunnable(new Object[]{filePath}) {
-                        public void run() {
-                            String filePath = (String) _params[0];
-                            loadRoute(filePath);
-                        }
-                    }
-            );
-        }
     }
 
     @Override
