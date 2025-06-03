@@ -12,7 +12,6 @@ import android.location.GnssStatus.Callback;
 import android.location.LocationManager;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -37,14 +36,18 @@ public final class GuidancePointProximityManager {
 //		}
 //	};
 
+
+
     public GuidancePointProximityManager(IGuidanceProvider guidanceProvider, TextToSpeech tts, ContextWrapper context) {
         _proximityReceiver = new ProximityReceiver(tts);
         _guidanceProvider = guidanceProvider;
         _context = context;
         _locationManager = (LocationManager) _context.getSystemService(Context.LOCATION_SERVICE);
+    }
+
+    public void init(){
         if (_context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             Log.e(LOG_TAG, "The application hasn't ACCESS_FINE_LOCATION permission!");
-            Toast.makeText(context, "No location permission!", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -122,6 +125,10 @@ public final class GuidancePointProximityManager {
             _locationManager.removeProximityAlert(pIntent);
         }
         _pIntentsCollection.clear();
+    }
+
+    public int countProximityAlerts(){
+        return _pIntentsCollection.size();
     }
 
     private void addGuidancePoint(GuidancePoint guidancePoint) {

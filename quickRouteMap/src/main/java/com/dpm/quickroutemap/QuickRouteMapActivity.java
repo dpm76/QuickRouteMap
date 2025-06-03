@@ -1,5 +1,6 @@
 package com.dpm.quickroutemap;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -13,6 +14,10 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.dpm.quickroutemap.navigation.GeoPointSerializer;
 import com.dpm.quickroutemap.navigation.GuidancePoint;
@@ -50,6 +55,9 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
     private final String LOG_TAG = QuickRouteMapActivity.class.getSimpleName();
 
+    private final static int LOCATION_PERMISSION_REQUEST_CODE = 1001;
+    private static final int LOCATION_SETTINGS_REQUEST_CODE = 1002;
+
     private final static String ROUTES_DIR_PATH = "/routes/";
     private final static String FILE_EXTENSION_JSON = ".json";
 
@@ -86,12 +94,21 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         return getBaseContext().getFilesDir().getAbsolutePath();
     }
 
+    private void requestLocationPermission() {
+        ActivityCompat.requestPermissions(
+                this,
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                LOCATION_PERMISSION_REQUEST_CODE
+        );
+    }
+
     /**
      * Called when the activity is first created.
      */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         IConfigurationProvider mapConfig = Configuration.getInstance();
         mapConfig.setUserAgentValue(getPackageName());
         File osmBasePath = new File(getDataPath() + "/osmdroid");
@@ -139,6 +156,12 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                 });
 
         _proximityManager = new GuidancePointProximityManager(this, _tts, this);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestLocationPermission();
+        }else{
+            _proximityManager.init();
+        }
 
         //Iniciar serializador
         _routeSerializer = new GsonBuilder()
@@ -364,4 +387,18 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
         return _currentRoute != null ? _currentRoute.getGuidancePoints() : null;
     }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                _proximityManager.init();
+            } else {
+                Log.i(LOG_TAG, "User rejected the location permission");
+                Toast.makeText(this, "No location permission!", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
 }

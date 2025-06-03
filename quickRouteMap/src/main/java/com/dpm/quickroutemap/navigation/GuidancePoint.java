@@ -5,17 +5,22 @@ import org.osmdroid.util.GeoPoint;
 
 public class GuidancePoint {
 	
-	private final static float DEFAULT_RADIUS = 500f;
+	private final static int DEFAULT_RADIUS = 500;
 	
-	private String _key;
-	private IGeoPoint _point;
-	private String _narrative;
-	private int _radius;
-	
-	public GuidancePoint(String key, double latitude, double longitude, String narrative){
+	private final String _key;
+	private final IGeoPoint _point;
+	private final String _narrative;
+	private final int _radius;
+
+	public GuidancePoint(String key, double latitude, double longitude, String narrative) {
+		this(key, latitude, longitude, narrative, DEFAULT_RADIUS);
+	}
+
+	public GuidancePoint(String key, double latitude, double longitude, String narrative, int radius){
 		_key = key;
 		_point = new GeoPoint(latitude, longitude); 
-		_narrative = narrative; 
+		_narrative = narrative;
+		_radius = radius;
 	}
 	
 	public String getKey(){
