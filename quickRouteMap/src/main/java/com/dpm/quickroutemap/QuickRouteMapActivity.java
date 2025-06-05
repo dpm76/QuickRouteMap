@@ -4,10 +4,13 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.Menu;
@@ -309,6 +312,9 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
             case R.id.resetZoomMenuItem:
                 _mapController.setZoom(DEFAULT_ZOOM);
                 break;
+            case R.id.locationPermissionMenuItem:
+                requestBackgroundLocationPermission();
+                break;
             default:
                 handled = super.onOptionsItemSelected(item);
                 break;
@@ -394,11 +400,18 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 _proximityManager.init();
+                requestBackgroundLocationPermission();
             } else {
                 Log.i(LOG_TAG, "User rejected the location permission");
                 Toast.makeText(this, "No location permission!", Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    private void requestBackgroundLocationPermission() {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(Uri.fromParts("package", getPackageName(), null));
+        startActivity(intent);
     }
 
 }

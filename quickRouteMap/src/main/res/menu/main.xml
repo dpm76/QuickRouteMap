@@ -1,15 +1,24 @@
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
-    <item
-	    android:id="@+id/userCenterMenuItem"
-	    android:icon="@android:drawable/ic_menu_mylocation"
-	    android:title="@string/userCenterMenuItemLabel"/>
-    <item
-	    android:id="@+id/resetZoomMenuItem"
-	    android:icon="@android:drawable/ic_menu_zoom"
-	    android:title="@string/resetZoomMenuItemLabel"/>
-    <item
-        android:id="@+id/openRouteFileMenuItem"
-        android:icon="@android:drawable/ic_menu_myplaces"
-        android:title="@string/openRouteFileMenuItemLabel"/>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:android="http://schemas.android.com/apk/res/android">
+	<item
+		android:id="@+id/userCenterMenuItem"
+		android:icon="@android:drawable/ic_menu_mylocation"
+		android:title="@string/userCenterMenuItemLabel"
+		app:showAsAction="ifRoom" />
+	<item
+		android:id="@+id/resetZoomMenuItem"
+		android:icon="@android:drawable/ic_menu_zoom"
+		android:title="@string/resetZoomMenuItemLabel"
+		app:showAsAction="ifRoom" />
+	<item
+		android:id="@+id/openRouteFileMenuItem"
+		android:icon="@android:drawable/ic_menu_myplaces"
+		android:title="@string/openRouteFileMenuItemLabel"
+		app:showAsAction="ifRoom" />
+	<item
+		android:id="@+id/locationPermissionMenuItem"
+		android:icon="@android:drawable/ic_menu_manage"
+		android:title="@string/locationPermissionMenuItemLabel"
+		app:showAsAction="ifRoom" />
 </menu>
     

@@ -7,4 +7,5 @@
     <string name="openRouteFileMenuItemLabel">Cargar ruta</string>
     <string name="selectRoute">Selecciona ruta</string>
     <string name="noRouteMessage">No hay rutas disponibles</string>
+    <string name="locationPermissionMenuItemLabel">Permisos</string>
 </resources>
