@@ -11,7 +11,6 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -23,8 +22,9 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.dpm.quickroutemap.navigation.GeoPointSerializer;
+import com.dpm.quickroutemap.navigation.GuidanceManager;
 import com.dpm.quickroutemap.navigation.GuidancePoint;
-import com.dpm.quickroutemap.navigation.GuidancePointProximityManager;
+import com.dpm.quickroutemap.navigation.GuidancePointProximityService;
 import com.dpm.quickroutemap.navigation.IGuidanceProvider;
 import com.dpm.quickroutemap.navigation.Route;
 import com.google.gson.Gson;
@@ -51,7 +51,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 
 public final class QuickRouteMapActivity extends Activity implements IGuidanceProvider {
@@ -83,26 +82,16 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private OverlayManager _mapOverlayManager;
     private TilesFetcher _tilesFetcher;
     private ExtendedMyLocationNewOverlay _myLocationOverlay;
-
+    private GuidanceManager _guidanceManager;
     private ConnectivityManager _connectivityManager;
     //Indica el estado de la conexión de datos de la última vez que se comprobó
     private boolean _hasDataNetwork;
 
-    private GuidancePointProximityManager _proximityManager;
-    private TextToSpeech _tts;
     private Gson _routeSerializer;
 
     private String getDataPath(){
 
         return getBaseContext().getFilesDir().getAbsolutePath();
-    }
-
-    private void requestLocationPermission() {
-        ActivityCompat.requestPermissions(
-                this,
-                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                LOCATION_PERMISSION_REQUEST_CODE
-        );
     }
 
     /**
@@ -150,20 +139,12 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
         _mapController.setZoom(DEFAULT_ZOOM);
 
-        //Iniciar TTS
-        _tts = new TextToSpeech(getApplicationContext(),
-                status -> {
-                    if (status != TextToSpeech.ERROR) {
-                        _tts.setLanguage(new Locale("es", "ES"));
-                    }
-                });
-
-        _proximityManager = new GuidancePointProximityManager(this, _tts, this);
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+        _guidanceManager = GuidanceManager.getInstance();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             requestLocationPermission();
         }else{
-            _proximityManager.init();
+            startGuidancePointProximityService();
         }
 
         //Iniciar serializador
@@ -223,10 +204,6 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
     @Override
     protected void onDestroy() {
-        _tts.stop();
-        _tts.shutdown();
-        _proximityManager.close();
-
         super.onDestroy();
     }
 
@@ -247,7 +224,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         try {
             _currentRoute = _routeSerializer.fromJson(reader, Route.class);
 
-            _proximityManager.setRouteGuidance(_currentRoute.getGuidancePoints());
+            _guidanceManager.setRouteGuidance(_currentRoute.getGuidancePoints());
 
             showRoute();
 
@@ -394,12 +371,22 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         return _currentRoute != null ? _currentRoute.getGuidancePoints() : null;
     }
 
+    private void requestLocationPermission() {
+        ActivityCompat.requestPermissions(
+                this,
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                LOCATION_PERMISSION_REQUEST_CODE
+        );
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                _proximityManager.init();
+                startGuidancePointProximityService();
                 requestBackgroundLocationPermission();
             } else {
                 Log.i(LOG_TAG, "User rejected the location permission");
@@ -414,4 +401,9 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         startActivity(intent);
     }
 
+    private void startGuidancePointProximityService() {
+        Log.d(LOG_TAG, "Iniciando GuidancePointProximityService");
+        Intent serviceIntent = new Intent(this, GuidancePointProximityService.class);
+        ContextCompat.startForegroundService(this, serviceIntent);
+    }
 }

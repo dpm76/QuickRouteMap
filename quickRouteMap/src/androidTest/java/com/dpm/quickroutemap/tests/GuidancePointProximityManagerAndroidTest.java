@@ -4,6 +4,7 @@ import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentat
 
 import android.Manifest;
 import android.content.ContextWrapper;
+import android.speech.tts.TextToSpeech;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
@@ -18,6 +19,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 
 /**
  * Created by david on 4/09/2017.
@@ -37,8 +39,8 @@ public class GuidancePointProximityManagerAndroidTest {
         getInstrumentation().runOnMainSync(() -> {
             ContextWrapper context = new ContextWrapper(getInstrumentation().getTargetContext());
             Assert.assertNotNull("Context not created correctly", context);
-            _manager = new GuidancePointProximityManager(null, null, context);
-            _manager.init();
+            TextToSpeech textToSpeechMock = Mockito.mock(TextToSpeech.class);
+            _manager = new GuidancePointProximityManager(null, textToSpeechMock, context);
         });
     }
 

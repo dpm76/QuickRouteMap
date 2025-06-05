@@ -9,13 +9,17 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.GnssStatus;
 import android.location.GnssStatus.Callback;
+import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 
-public final class GuidancePointProximityManager {
+public final class GuidancePointProximityManager implements IGuidanceConsumer, LocationListener {
 
     private static final String CONTENT_PROXIMITY_ALERT = "com.dpm.quickroutemap.GUIDANCE-POINT_PROXIMITY_ALERT";
     private static final String LOG_TAG = GuidancePointProximityManager.class.getSimpleName();
@@ -43,13 +47,14 @@ public final class GuidancePointProximityManager {
         _guidanceProvider = guidanceProvider;
         _context = context;
         _locationManager = (LocationManager) _context.getSystemService(Context.LOCATION_SERVICE);
-    }
 
-    public void init(){
         if (_context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             Log.e(LOG_TAG, "The application hasn't ACCESS_FINE_LOCATION permission!");
             return;
         }
+
+        _locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER, 1000, 10, this);
 
         _locationManager.registerGnssStatusCallback(new Callback() {
             @Override
@@ -57,6 +62,7 @@ public final class GuidancePointProximityManager {
 
                 Log.d(LOG_TAG, "GPS started");
                 _gpsReady = true;
+                tts.speak("Sistema de ubicación iniciado", TextToSpeech.QUEUE_ADD, null);
                 if (_gpsFixed) {
                     setRouteGuidance(_guidanceProvider.getCurrentRouteGuidance());
                 }
@@ -65,6 +71,7 @@ public final class GuidancePointProximityManager {
             @Override
             public void onStopped() {
                 Log.d(LOG_TAG, "GPS stopped");
+                tts.speak("Sistema de ubicación detenido", TextToSpeech.QUEUE_ADD, null);
                 _gpsReady = false;
                 removeRouteGuidance();
             }
@@ -73,6 +80,7 @@ public final class GuidancePointProximityManager {
             public void onFirstFix(int ttffMillis) {
                 Log.d(LOG_TAG, String.format("GPS first fix after %1$d seconds.", ttffMillis / 1000));
                 _gpsFixed = true;
+                tts.speak("Ubicación encontrada", TextToSpeech.QUEUE_ADD, null);
                 setRouteGuidance(_guidanceProvider.getCurrentRouteGuidance());
             }
 
@@ -101,6 +109,7 @@ public final class GuidancePointProximityManager {
 //		setRoute(/*ruta actual*/);
 //	}
 
+    @Override
     public void setRouteGuidance(GuidancePoint[] routeGuidance) {
 
         if (hasAlerts()) {
@@ -108,7 +117,7 @@ public final class GuidancePointProximityManager {
         }
 
         if (routeGuidance != null) {
-            Log.d(LOG_TAG, "Añadiendo guiado");
+            Log.d(LOG_TAG, "Añadiendo ruta");
             for (GuidancePoint guidancePoint : routeGuidance) {
                 addGuidancePoint(guidancePoint);
             }
@@ -162,7 +171,13 @@ public final class GuidancePointProximityManager {
         Log.d(LOG_TAG, "Cerrando");
         _context.unregisterReceiver(_proximityReceiver);
         removeRouteGuidance();
+        _locationManager.removeUpdates(this);
         //unregisterEvents();
+    }
+
+    @Override
+    public void onLocationChanged(@NonNull Location location) {
+        Log.d(LOG_TAG, String.format("Location changed: %s", location));
     }
 
 //	private void onRouteChanged(){

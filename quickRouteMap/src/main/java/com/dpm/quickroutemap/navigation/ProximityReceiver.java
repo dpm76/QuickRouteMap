@@ -1,7 +1,5 @@
 package com.dpm.quickroutemap.navigation;
 
-import java.util.LinkedList;
-
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -9,6 +7,8 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
+
+import java.util.LinkedList;
 
 public final class ProximityReceiver extends BroadcastReceiver {
 
@@ -44,6 +44,7 @@ public final class ProximityReceiver extends BroadcastReceiver {
 			
 			if(entering && !isRecent(guidancePointKey)){
 				setAsRecent(guidancePointKey);
+				Log.i(LOG_TAG, String.format("TTS: %s", guidanceNarrative));
 				_tts.speak(guidanceNarrative, TextToSpeech.QUEUE_ADD, null);
 			}else{
 				Log.d(LOG_TAG, "Esté saliendo o se ha reproducido recientemente.");
