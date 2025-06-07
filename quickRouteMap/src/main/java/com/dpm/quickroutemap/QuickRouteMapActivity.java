@@ -58,7 +58,10 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private final String LOG_TAG = QuickRouteMapActivity.class.getSimpleName();
 
     private final static int LOCATION_PERMISSION_REQUEST_CODE = 1001;
-    private static final int LOCATION_SETTINGS_REQUEST_CODE = 1002;
+
+    private static final int BACKGROUND_PERMISSION_REQUEST_CODE = 1002;
+
+    private static final int POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE = 1003;
 
     private final static String ROUTES_DIR_PATH = "/routes/";
     private final static String FILE_EXTENSION_JSON = ".json";
@@ -140,12 +143,8 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         _mapController.setZoom(DEFAULT_ZOOM);
 
         _guidanceManager = GuidanceManager.getInstance();
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            requestLocationPermission();
-        }else{
-            startGuidancePointProximityService();
-        }
+
+        checkPermissions();
 
         //Iniciar serializador
         _routeSerializer = new GsonBuilder()
@@ -290,7 +289,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                 _mapController.setZoom(DEFAULT_ZOOM);
                 break;
             case R.id.locationPermissionMenuItem:
-                requestBackgroundLocationPermission();
+                requestPermissionsManually();
                 break;
             default:
                 handled = super.onOptionsItemSelected(item);
@@ -371,12 +370,76 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         return _currentRoute != null ? _currentRoute.getGuidancePoints() : null;
     }
 
-    private void requestLocationPermission() {
-        ActivityCompat.requestPermissions(
-                this,
-                new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                LOCATION_PERMISSION_REQUEST_CODE
-        );
+    private void checkPermissions(){
+        final Context that = this;
+        checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, LOCATION_PERMISSION_REQUEST_CODE,
+                new IPermissionCheckActions() {
+                    @Override
+                    public void doOnSuccess() {
+                        checkPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, BACKGROUND_PERMISSION_REQUEST_CODE,
+                                new IPermissionCheckActions() {
+                                    @Override
+                                    public void doOnSuccess() {
+                                        checkPermission(Manifest.permission.POST_NOTIFICATIONS, POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE,
+                                                new IPermissionCheckActions() {
+                                                    @Override
+                                                    public void doOnSuccess() {
+                                                        startGuidancePointProximityService();
+                                                    }
+
+                                                    @Override
+                                                    public void doOnFail() {
+                                                        Toast.makeText(that, "I can not post notifications!", Toast.LENGTH_SHORT).show();
+                                                    }
+                                                });
+                                    }
+
+                                    @Override
+                                    public void doOnFail() {
+                                        Toast.makeText(that, "No background location permission!", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                    }
+
+                    @Override
+                    public void doOnFail() {
+                        Toast.makeText(that, "No location permission!", Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+
+
+//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+//                != PackageManager.PERMISSION_GRANTED) {
+//            requestReadExternalStoragePermission();
+//        }
+    }
+
+//    private void requestReadExternalStoragePermission(){
+//        ActivityCompat.requestPermissions(this,
+//                new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+//                READ_EXTERNAL_STORAGE_REQUEST_CODE);
+//    }
+
+    private HashMap<Integer, IPermissionCheckActions> _actionsMap = new HashMap<>();
+
+    private void checkPermission(String permission, int requestCode, IPermissionCheckActions permissionCheckActions){
+        Log.d(LOG_TAG, String.format("Checking %s permission", permission));
+        if (ActivityCompat.checkSelfPermission(this, permission)
+                != PackageManager.PERMISSION_GRANTED) {
+            if(!_actionsMap.containsKey(requestCode)) {
+                _actionsMap.put(requestCode, permissionCheckActions);
+            }
+            Log.d(LOG_TAG, String.format("Asking for %s permission", permission));
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{permission},
+                    requestCode
+            );
+        }else{
+            Log.d(LOG_TAG, String.format("Permission %s was already granted", permission));
+            permissionCheckActions.doOnSuccess();
+        }
     }
 
     @Override
@@ -384,18 +447,17 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startGuidancePointProximityService();
-                requestBackgroundLocationPermission();
-            } else {
-                Log.i(LOG_TAG, "User rejected the location permission");
-                Toast.makeText(this, "No location permission!", Toast.LENGTH_SHORT).show();
-            }
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+            Log.i(LOG_TAG, String.format("User granted %s permission", permissions[0]));
+            _actionsMap.get(requestCode).doOnSuccess();
+        }else{
+            Log.w(LOG_TAG, String.format("User denied %s permission", permissions[0]));
+            _actionsMap.get(requestCode).doOnFail();
         }
     }
 
-    private void requestBackgroundLocationPermission() {
+    private void requestPermissionsManually() {
+
         Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
         intent.setData(Uri.fromParts("package", getPackageName(), null));
         startActivity(intent);
