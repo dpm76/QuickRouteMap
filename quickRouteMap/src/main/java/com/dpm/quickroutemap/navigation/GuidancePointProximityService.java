@@ -33,21 +33,21 @@ public class GuidancePointProximityService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        Log.d(LOG_TAG, "Iniciando notificación en primer plano.");
+        Log.d(LOG_TAG, "Starting foreground notification.");
         createNotificationChannel();
         startForeground(1, buildNotification());
 
         //Iniciar TTS
-        Log.d(LOG_TAG, "iniciando TTS");
+        Log.d(LOG_TAG, "Initialising TTS");
         _tts = new TextToSpeech(getApplicationContext(),
                 status -> {
                     if (status != TextToSpeech.ERROR) {
-                        Log.d(LOG_TAG, "TTS iniciado");
+                        Log.d(LOG_TAG, "TTS started");
                         //TODO Obtener idioma de la configuración del dispositivo
                         _tts.setLanguage(new Locale("es", "ES"));
                     }
                 });
-        Log.d(LOG_TAG, "Iniciando proximity manager");
+        Log.d(LOG_TAG, "Initialising proximity manager");
         _proximityManager = new GuidancePointProximityManager(GuidanceManager.getInstance(), _tts, this);
         GuidanceManager.getInstance().setConsumer(_proximityManager);
     }
@@ -92,7 +92,7 @@ public class GuidancePointProximityService extends Service {
             if (manager != null) {
                 manager.createNotificationChannel(channel);
             } else {
-                Log.e(LOG_TAG, "NotificationManager es null");
+                Log.e(LOG_TAG, "NotificationManager is null");
             }
         }
     }

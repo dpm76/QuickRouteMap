@@ -45,38 +45,34 @@ import org.osmdroid.views.overlay.OverlayManager;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Objects;
 
 public final class QuickRouteMapActivity extends Activity implements IGuidanceProvider {
 
-    private final String LOG_TAG = QuickRouteMapActivity.class.getSimpleName();
+    private static final String LOG_TAG = QuickRouteMapActivity.class.getSimpleName();
 
-    private final static int LOCATION_PERMISSION_REQUEST_CODE = 1001;
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
 
     private static final int BACKGROUND_PERMISSION_REQUEST_CODE = 1002;
 
     private static final int POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE = 1003;
 
-    private final static String ROUTES_DIR_PATH = "/routes/";
-    private final static String FILE_EXTENSION_JSON = ".json";
+// Maybe necessay when routes are cached from the cloud
+//    private static final String ROUTES_DIR_PATH = "/routes/";
+//    private static final String FILE_EXTENSION_JSON = ".json";
 
-    private final static double DEFAULT_ZOOM = 12d;
+    private static final double DEFAULT_ZOOM = 12d;
     private final int ROUTE_COLOR = 0xa0ff6010;
     private final float ROUTE_WIDTH = 12f;
 
-    private final static String INTERNAL_STATE_ZOOM_KEY = "zoom";
-    private final static String INTERNAL_STATE_CENTER_LON_KEY = "center_lon";
-    private final static String INTERNAL_STATE_CENTER_LAT_KEY = "center_lat";
+    private static final String INTERNAL_STATE_ZOOM_KEY = "zoom";
+    private static final String INTERNAL_STATE_CENTER_LON_KEY = "center_lon";
+    private static final String INTERNAL_STATE_CENTER_LAT_KEY = "center_lat";
     private static Route _currentRoute; //TODO La ruta se debe guardar en _instanceState para recuperarla en onResume()
 
     //Se ha tenido que añadir el estado de forma explícita porque no llama a onRestoreInstanceState()
-    private final static Bundle _instanceState = new Bundle();
+    private static final Bundle _instanceState = new Bundle();
 
     private final HashMap<String, RouteOverlay> _routeOverlaysMap = new HashMap<>();
 
@@ -91,6 +87,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private boolean _hasDataNetwork;
 
     private Gson _routeSerializer;
+    private FilePicker _filePicker;
 
     private String getDataPath(){
 
@@ -150,6 +147,19 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         _routeSerializer = new GsonBuilder()
                 .registerTypeAdapter(IGeoPoint.class, new GeoPointSerializer())
                 .create();
+
+        _filePicker = new FilePicker(this, new FilePicker.IFilePickerCallback() {
+            @Override
+            public void onFileOpened(BufferedReader reader) {
+                loadRoute(reader);
+            }
+
+            @Override
+            public void onError() {
+                Toast.makeText(QuickRouteMapActivity.this, "No he podido leer ningún archivo", Toast.LENGTH_LONG).show();
+            }
+        });
+
 
         saveState();
     }
@@ -243,16 +253,17 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         }
     }
 
-    private void loadRoute(String path) {
-
-        try {
-            FileInputStream fis = new FileInputStream(path);
-            loadRoute(new BufferedReader(new InputStreamReader(fis)));
-            fis.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+// Maybe necessary when routes are cached from cloud
+//    private void loadRoute(String path) {
+//
+//        try {
+//            FileInputStream fis = new FileInputStream(path);
+//            loadRoute(new BufferedReader(new InputStreamReader(fis)));
+//            fis.close();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     private void showRoute() {
 
@@ -318,51 +329,57 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                     .setMessage("Descarga de mapas finalizada")
                     .setPositiveButton(android.R.string.ok, null)
                     .show();
-            //_tts.speak("Descarga de mapas finalizada.", TextToSpeech.QUEUE_ADD, null);
         } else {
             Toast.makeText(this, "Copiado de mapas finalizado", Toast.LENGTH_SHORT).show();
         }
     }
 
+//    Old behaviour. Possible example for reading cached routes from cloud (when implemented)
+//
+//    private void launchRouteFileBrowser() {
+//
+//        File routesDir = new File(getDataPath() + ROUTES_DIR_PATH);
+//        ArrayList<String> routePathList = new ArrayList<>();
+//        File [] routeFiles = routesDir.listFiles((dir, name) -> name.endsWith(FILE_EXTENSION_JSON));
+//        if (routeFiles != null && routeFiles.length != 0) {
+//            for (File routeFile : Objects.requireNonNull(routeFiles)) {
+//
+//                routePathList.add(routeFile.getName());
+//            }
+//        }
+//
+//        if(routePathList.size() != 0) {
+//            new AlertDialog.Builder(this)
+//                    .setTitle(R.string.selectRoute)
+//                    .setNegativeButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())
+//                    .setItems(routePathList.toArray(new String[routePathList.size()]), (dialog, which)
+//                            -> onRouteSelected(Collections.unmodifiableList(routePathList), which))
+//                    .create().show();
+//        } else {
+//            new AlertDialog.Builder(this)
+//                    .setMessage(R.string.noRouteMessage)
+//                    .setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss())
+//                    .create().show();
+//        }
+//    }
+
     private void launchRouteFileBrowser() {
-
-        File routesDir = new File(getDataPath() + ROUTES_DIR_PATH);
-        ArrayList<String> routePathList = new ArrayList<>();
-        File [] routeFiles = routesDir.listFiles((dir, name) -> name.endsWith(FILE_EXTENSION_JSON));
-        if (routeFiles != null && routeFiles.length != 0) {
-            for (File routeFile : Objects.requireNonNull(routeFiles)) {
-
-                routePathList.add(routeFile.getName());
-            }
-        }
-
-        if(routePathList.size() != 0) {
-            new AlertDialog.Builder(this)
-                    .setTitle(R.string.selectRoute)
-                    .setNegativeButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())
-                    .setItems(routePathList.toArray(new String[routePathList.size()]), (dialog, which)
-                            -> onRouteSelected(Collections.unmodifiableList(routePathList), which))
-                    .create().show();
-        } else {
-            new AlertDialog.Builder(this)
-                    .setMessage(R.string.noRouteMessage)
-                    .setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss())
-                    .create().show();
-        }
+        _filePicker.openFilePicker();
     }
 
-    private void onRouteSelected(List<String> routePathList,  int which){
-
-        String routeName = routePathList.get(which);
-        Log.d(LOG_TAG, String.format("Selected route: '%1$s'", routeName));
-        String routeFilePath = String.format("%1$s%2$s%3$s", getDataPath(), ROUTES_DIR_PATH, routeName);
-        if (!new File(routeFilePath).exists()) {
-            Log.w(LOG_TAG, String.format("File '%1$s' doesn't exist!", routeFilePath));
-            Toast.makeText(this, "Route file not found!", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        loadRoute(routeFilePath);
-    }
+// Maybe necessary again when routes are cached from the cloud.
+//    private void onRouteSelected(List<String> routePathList,  int which){
+//
+//        String routeName = routePathList.get(which);
+//        Log.d(LOG_TAG, String.format("Selected route: '%1$s'", routeName));
+//        String routeFilePath = String.format("%1$s%2$s%3$s", getDataPath(), ROUTES_DIR_PATH, routeName);
+//        if (!new File(routeFilePath).exists()) {
+//            Log.w(LOG_TAG, String.format("File '%1$s' doesn't exist!", routeFilePath));
+//            Toast.makeText(this, "Route file not found!", Toast.LENGTH_SHORT).show();
+//            return;
+//        }
+//        loadRoute(routeFilePath);
+//    }
 
     @Override
     public GuidancePoint[] getCurrentRouteGuidance() {
@@ -371,16 +388,18 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     }
 
     private void checkPermissions(){
-        final Context that = this;
-        checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, LOCATION_PERMISSION_REQUEST_CODE,
+        checkPermission(Manifest.permission.ACCESS_FINE_LOCATION,
+                LOCATION_PERMISSION_REQUEST_CODE,
                 new IPermissionCheckActions() {
                     @Override
                     public void doOnSuccess() {
-                        checkPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION, BACKGROUND_PERMISSION_REQUEST_CODE,
+                        checkPermission(Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                                BACKGROUND_PERMISSION_REQUEST_CODE,
                                 new IPermissionCheckActions() {
                                     @Override
                                     public void doOnSuccess() {
-                                        checkPermission(Manifest.permission.POST_NOTIFICATIONS, POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE,
+                                        checkPermission(Manifest.permission.POST_NOTIFICATIONS,
+                                                POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE,
                                                 new IPermissionCheckActions() {
                                                     @Override
                                                     public void doOnSuccess() {
@@ -389,37 +408,30 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
                                                     @Override
                                                     public void doOnFail() {
-                                                        Toast.makeText(that, "I can not post notifications!", Toast.LENGTH_SHORT).show();
+                                                        Toast.makeText(QuickRouteMapActivity.this,
+                                                                "I can not post notifications!",
+                                                                Toast.LENGTH_SHORT).show();
                                                     }
                                                 });
                                     }
 
                                     @Override
                                     public void doOnFail() {
-                                        Toast.makeText(that, "No background location permission!", Toast.LENGTH_SHORT).show();
+                                        Toast.makeText(QuickRouteMapActivity.this,
+                                                "No background location permission!",
+                                                Toast.LENGTH_SHORT).show();
                                     }
                                 });
                     }
 
                     @Override
                     public void doOnFail() {
-                        Toast.makeText(that, "No location permission!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(QuickRouteMapActivity.this,
+                                "No location permission!",
+                                Toast.LENGTH_SHORT).show();
                     }
                 });
-
-
-
-//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-//                != PackageManager.PERMISSION_GRANTED) {
-//            requestReadExternalStoragePermission();
-//        }
     }
-
-//    private void requestReadExternalStoragePermission(){
-//        ActivityCompat.requestPermissions(this,
-//                new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-//                READ_EXTERNAL_STORAGE_REQUEST_CODE);
-//    }
 
     private HashMap<Integer, IPermissionCheckActions> _actionsMap = new HashMap<>();
 
@@ -464,8 +476,17 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     }
 
     private void startGuidancePointProximityService() {
-        Log.d(LOG_TAG, "Iniciando GuidancePointProximityService");
+        Log.d(LOG_TAG, "Starting GuidancePointProximityService");
         Intent serviceIntent = new Intent(this, GuidancePointProximityService.class);
         ContextCompat.startForegroundService(this, serviceIntent);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == FilePicker.PICK_FILE_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
+            _filePicker.handleFileResult(data);
+        }
     }
 }
