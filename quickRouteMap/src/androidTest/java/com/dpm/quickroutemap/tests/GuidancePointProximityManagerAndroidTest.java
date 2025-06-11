@@ -59,7 +59,7 @@ public class GuidancePointProximityManagerAndroidTest {
                 new GuidancePoint("test4", 40.3, -3.0, "Test 4."),
         };
 
-        _manager.setRouteGuidance(guidancePoints);
+        _manager.setCurrentRouteGuidance(guidancePoints);
 
         Assert.assertEquals(guidancePoints.length, _manager.countProximityAlerts());
     }

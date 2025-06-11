@@ -20,5 +20,15 @@
 		android:icon="@android:drawable/ic_menu_manage"
 		android:title="@string/locationPermissionMenuItemLabel"
 		app:showAsAction="ifRoom" />
+	<item
+		android:id="@+id/appInfoMenuItem"
+		android:icon="@android:drawable/ic_dialog_info"
+		android:title="@string/appInfoMenuItemLabel"
+		app:showAsAction="ifRoom" />
+	<item
+		android:id="@+id/closeAppMenuItem"
+		android:icon="@android:drawable/ic_menu_close_clear_cancel"
+		android:title="@string/appCloseMenuItemLabel"
+		app:showAsAction="ifRoom" />
 </menu>
     

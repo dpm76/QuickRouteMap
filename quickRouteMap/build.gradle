@@ -28,8 +28,6 @@ android {
 }
 
 dependencies {
-//    implementation 'androidx.appcompat:appcompat:1.6.0'
-    //implementation 'com.google.android.material:material:1.8.0'
     implementation project(':framework')
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'org.osmdroid:osmdroid-android:6.1.0'

@@ -10,6 +10,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
@@ -143,6 +144,14 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
         checkPermissions();
 
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        String packageName = getPackageName();
+        if (pm.isIgnoringBatteryOptimizations(packageName)) {
+            Log.d(LOG_TAG, "Opening battery settings");
+            Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+            startActivity(intent);
+        }
+
         //Iniciar serializador
         _routeSerializer = new GsonBuilder()
                 .registerTypeAdapter(IGeoPoint.class, new GeoPointSerializer())
@@ -232,8 +241,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
         try {
             _currentRoute = _routeSerializer.fromJson(reader, Route.class);
-
-            _guidanceManager.setRouteGuidance(_currentRoute.getGuidancePoints());
+            _guidanceManager.setCurrentRouteGuidance(_currentRoute.getGuidancePoints());
 
             showRoute();
 
@@ -286,9 +294,9 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
-        boolean handled = true;
+        Log.d(LOG_TAG, String.format("Selected main menu item: %1$s",
+                Objects.requireNonNull(item.getTitle())));
 
-        Log.d(LOG_TAG, Objects.requireNonNull(item.getTitle()).toString());
         switch (item.getItemId()) {
             case R.id.userCenterMenuItem:
                 centerAtUserLocation();
@@ -302,11 +310,18 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
             case R.id.locationPermissionMenuItem:
                 requestPermissionsManually();
                 break;
-            default:
-                handled = super.onOptionsItemSelected(item);
+            case R.id.appInfoMenuItem:
+                Intent intent = new Intent(this, AppInfoActivity.class);
+                startActivity(intent);
                 break;
+            case R.id.closeAppMenuItem:
+                stopService(new Intent(this, GuidancePointProximityService.class));
+                finish();
+                break;
+            default:
+                return super.onOptionsItemSelected(item);
         }
-        return handled;
+        return true;
     }
 
     private void centerAtUserLocation() {

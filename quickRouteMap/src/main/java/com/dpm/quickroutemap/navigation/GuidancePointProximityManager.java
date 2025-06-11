@@ -64,7 +64,7 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
                 _gpsReady = true;
                 tts.speak("Sistema de ubicación iniciado", TextToSpeech.QUEUE_ADD, null);
                 if (_gpsFixed) {
-                    setRouteGuidance(_guidanceProvider.getCurrentRouteGuidance());
+                    setCurrentRouteGuidance(_guidanceProvider.getCurrentRouteGuidance());
                 }
             }
 
@@ -81,7 +81,7 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
                 Log.d(LOG_TAG, String.format("GPS first fix after %1$d seconds.", ttffMillis / 1000));
                 _gpsFixed = true;
                 tts.speak("Ubicación encontrada", TextToSpeech.QUEUE_ADD, null);
-                setRouteGuidance(_guidanceProvider.getCurrentRouteGuidance());
+                setCurrentRouteGuidance(_guidanceProvider.getCurrentRouteGuidance());
             }
 
             @Override
@@ -110,7 +110,7 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
 //	}
 
     @Override
-    public void setRouteGuidance(GuidancePoint[] routeGuidance) {
+    public void setCurrentRouteGuidance(GuidancePoint[] routeGuidance) {
 
         if (hasAlerts()) {
             removeRouteGuidance();
@@ -134,6 +134,7 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
             _locationManager.removeProximityAlert(pIntent);
         }
         _pIntentsCollection.clear();
+        _proximityReceiver.clear();
     }
 
     public int countProximityAlerts(){

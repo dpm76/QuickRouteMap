@@ -17,7 +17,7 @@ public final class ProximityReceiver extends BroadcastReceiver {
 	public static final String GUIDANCE_POINT_KEY = "guidance-point_key";
 	public static final String GUIDANCE_POINT_NARRATIVE = "guidance-point_narrative";	
 	
-	private static final int MAX_RECENT_QUEUE = 32;
+	private static final int MAX_RECENT_QUEUE = 128;
 	
 	private final LinkedList<String> _recentGuidancePoints= new LinkedList<String>();
 	
@@ -62,6 +62,9 @@ public final class ProximityReceiver extends BroadcastReceiver {
 		}
 		_recentGuidancePoints.add(guidancePointKey);
 	}
-	
+
+	public void clear(){
+		_recentGuidancePoints.clear();
+	}
 }
 

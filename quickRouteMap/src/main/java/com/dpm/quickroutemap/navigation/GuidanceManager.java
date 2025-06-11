@@ -20,10 +20,10 @@ public class GuidanceManager implements IGuidanceProvider{
         _consumer = consumer;
     }
 
-    public void setRouteGuidance(GuidancePoint[] routeGuidance) {
+    public void setCurrentRouteGuidance(GuidancePoint[] routeGuidance) {
         _route = routeGuidance;
         if (_consumer != null){
-            _consumer.setRouteGuidance(_route);
+            _consumer.setCurrentRouteGuidance(_route);
         }
     }
 

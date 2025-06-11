@@ -32,11 +32,16 @@
         <activity
             android:name=".QuickRouteMapActivity"
             android:exported="true"
+            android:launchMode="singleInstance"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity
+            android:name=".AppInfoActivity"
+            android:exported="false">
         </activity>
     </application>
 

@@ -14,6 +14,7 @@ import android.util.Log;
 import androidx.core.app.NotificationCompat;
 
 import com.dpm.quickroutemap.QuickRouteMapActivity;
+import com.dpm.quickroutemap.R;
 
 import java.util.Locale;
 
@@ -67,8 +68,8 @@ public class GuidancePointProximityService extends Service {
                 this, 0, intent, PendingIntent.FLAG_IMMUTABLE
         );
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Ubicación activada")
-                .setContentText("La aplicación actualizará la ubicación también en segundo plano.")
+                .setContentTitle(getResources().getString(R.string.mainNotificationChannelTitle))
+                .setContentText(getResources().getString(R.string.mainNotificationChannelText))
                 .setSmallIcon(android.R.drawable.ic_menu_mylocation)
                 .setContentIntent(pendingIntent)
                 .build();
@@ -84,10 +85,10 @@ public class GuidancePointProximityService extends Service {
             Log.d(LOG_TAG, "createNotificationChannel()");
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
-                    "Notificaciones de ubicación",
+                    getResources().getString(R.string.mainNotificationChannelName),
                     NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription("Canal usado para permitir la ubicación mientras la app está en segundo plano.");
+            channel.setDescription(getResources().getString(R.string.mainNotificationChannelDescription));
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);

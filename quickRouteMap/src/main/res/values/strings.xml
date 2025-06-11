@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">QuickRouteMap</string>
+    <string name="app_name" translatable="false">QuickRouteMap</string>
 
     <string name="userCenterMenuItemLabel">Mi ubicación</string>
     <string name="resetZoomMenuItemLabel">Reset zoom</string>
@@ -8,4 +8,10 @@
     <string name="selectRoute">Selecciona ruta</string>
     <string name="noRouteMessage">No hay rutas disponibles</string>
     <string name="locationPermissionMenuItemLabel">Permisos</string>
+    <string name="appInfoMenuItemLabel">Info</string>
+    <string name="appCloseMenuItemLabel">Terminar</string>
+    <string name="mainNotificationChannelTitle">Ubicación activada</string>
+    <string name="mainNotificationChannelText">La aplicación actualizará la ubicación también en segundo plano.</string>
+    <string name="mainNotificationChannelName">Notificaciones de ubicación</string>
+    <string name="mainNotificationChannelDescription">Canal usado para permitir la ubicación mientras la app está en segundo plano.</string>
 </resources>
