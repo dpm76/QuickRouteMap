@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -67,13 +68,13 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private final int ROUTE_COLOR = 0xa0ff6010;
     private final float ROUTE_WIDTH = 12f;
 
+    private static final float DEFAULT_MAP_CENTER_LONGITUDE = 0f;
+    private static final float DEFAULT_MAP_CENTER_LATITUDE = 0f;
+
     private static final String INTERNAL_STATE_ZOOM_KEY = "zoom";
     private static final String INTERNAL_STATE_CENTER_LON_KEY = "center_lon";
     private static final String INTERNAL_STATE_CENTER_LAT_KEY = "center_lat";
     private static Route _currentRoute; //TODO La ruta se debe guardar en _instanceState para recuperarla en onResume()
-
-    //Se ha tenido que añadir el estado de forma explícita porque no llama a onRestoreInstanceState()
-    private static final Bundle _instanceState = new Bundle();
 
     private final HashMap<String, RouteOverlay> _routeOverlaysMap = new HashMap<>();
 
@@ -93,6 +94,28 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private String getDataPath(){
 
         return getBaseContext().getFilesDir().getAbsolutePath();
+    }
+
+    private void saveMapState(double latitude, double longitude, double zoom){
+        Log.d(LOG_TAG,
+                String.format("Saving: lat %1$f; lon %2$f; zoom %3$f", latitude, longitude, zoom));
+        SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+        preferences.edit()
+                .putFloat(INTERNAL_STATE_CENTER_LAT_KEY, (float) latitude)
+                .putFloat(INTERNAL_STATE_CENTER_LON_KEY, (float) longitude)
+                .putFloat(INTERNAL_STATE_ZOOM_KEY, (float) zoom)
+                .apply();
+    }
+
+    private void restoreMapState(){
+        SharedPreferences preferences = getPreferences(MODE_PRIVATE);
+        float longitude = preferences.getFloat(INTERNAL_STATE_CENTER_LON_KEY, DEFAULT_MAP_CENTER_LONGITUDE);
+        float latitude = preferences.getFloat(INTERNAL_STATE_CENTER_LAT_KEY, DEFAULT_MAP_CENTER_LATITUDE);
+        float zoom = preferences.getFloat(INTERNAL_STATE_ZOOM_KEY, (float)DEFAULT_ZOOM);
+        Log.d(LOG_TAG,
+                String.format("Reading: lat %1$f; lon %2$f; zoom %3$f", latitude, longitude, zoom));
+        _mapController.setZoom(zoom);
+        _mapController.setCenter(new GeoPoint(latitude, longitude));
     }
 
     /**
@@ -138,8 +161,6 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         _myLocationOverlay = new ExtendedMyLocationNewOverlay(this, _mapView);
         _mapOverlayManager.add(_myLocationOverlay);
 
-        _mapController.setZoom(DEFAULT_ZOOM);
-
         _guidanceManager = GuidanceManager.getInstance();
 
         checkPermissions();
@@ -168,39 +189,22 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                 Toast.makeText(QuickRouteMapActivity.this, "No he podido leer ningún archivo", Toast.LENGTH_LONG).show();
             }
         });
-
-
-        saveState();
     }
 
     private void saveState() {
         Log.d(LOG_TAG, "saveState()");
 
-        _instanceState.putDouble(INTERNAL_STATE_ZOOM_KEY, _mapView.getZoomLevelDouble());
+        double zoom = _mapView.getZoomLevelDouble();
         IGeoPoint center = _mapView.getMapCenter();
         double longitude = center.getLongitude();
         double latitude = center.getLatitude();
-        if (longitude != 0 && latitude != 0) {
-            _instanceState.putDouble(INTERNAL_STATE_CENTER_LON_KEY, longitude);
-            _instanceState.putDouble(INTERNAL_STATE_CENTER_LAT_KEY, latitude);
-        }
+
+        saveMapState(latitude, longitude, zoom);
     }
 
     private void restoreState() {
         Log.d(LOG_TAG, "restoreState()");
-
-        if (_instanceState.containsKey(INTERNAL_STATE_ZOOM_KEY)) {
-            _mapController.setZoom(_instanceState.getDouble(INTERNAL_STATE_ZOOM_KEY, DEFAULT_ZOOM));
-        }
-
-        if (_instanceState.containsKey(INTERNAL_STATE_CENTER_LAT_KEY) &&
-                _instanceState.containsKey(INTERNAL_STATE_CENTER_LON_KEY)) {
-
-            _mapController.setCenter(new GeoPoint(
-                    _instanceState.getDouble(INTERNAL_STATE_CENTER_LAT_KEY),
-                    _instanceState.getDouble(INTERNAL_STATE_CENTER_LON_KEY)));
-        }
-
+        restoreMapState();
         showRoute();
     }
 
@@ -217,6 +221,13 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         super.onPause();
         Log.d(LOG_TAG, "onPause()");
         _myLocationOverlay.disableMyLocation();
+        saveState();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.d(LOG_TAG, "onStop()");
         saveState();
     }
 
@@ -256,6 +267,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
             IGeoPoint center = _currentRoute.getWayPoints().get(0);
             _mapController.setCenter(center);
+            saveMapState(center.getLatitude(), center.getLongitude(), _mapView.getZoomLevelDouble());
         } catch (JsonIOException e) {
             Log.e(LOG_TAG, "No se ha añadido la ruta");
         }
@@ -448,7 +460,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                 });
     }
 
-    private HashMap<Integer, IPermissionCheckActions> _actionsMap = new HashMap<>();
+    private final HashMap<Integer, IPermissionCheckActions> _actionsMap = new HashMap<>();
 
     private void checkPermission(String permission, int requestCode, IPermissionCheckActions permissionCheckActions){
         Log.d(LOG_TAG, String.format("Checking %s permission", permission));
@@ -476,10 +488,10 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
             Log.i(LOG_TAG, String.format("User granted %s permission", permissions[0]));
-            _actionsMap.get(requestCode).doOnSuccess();
+            Objects.requireNonNull(_actionsMap.get(requestCode)).doOnSuccess();
         }else{
             Log.w(LOG_TAG, String.format("User denied %s permission", permissions[0]));
-            _actionsMap.get(requestCode).doOnFail();
+            Objects.requireNonNull(_actionsMap.get(requestCode)).doOnFail();
         }
     }
 
