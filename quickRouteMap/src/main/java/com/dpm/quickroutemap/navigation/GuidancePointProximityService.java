@@ -6,7 +6,6 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.os.Build;
 import android.os.IBinder;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
@@ -77,20 +76,18 @@ public class GuidancePointProximityService extends Service {
     }
 
     private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Log.d(LOG_TAG, "createNotificationChannel()");
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    getResources().getString(R.string.mainNotificationChannelName),
-                    NotificationManager.IMPORTANCE_LOW
-            );
-            channel.setDescription(getResources().getString(R.string.mainNotificationChannelDescription));
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            } else {
-                Log.e(LOG_TAG, "NotificationManager is null");
-            }
+        Log.d(LOG_TAG, "createNotificationChannel()");
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                getResources().getString(R.string.mainNotificationChannelName),
+                NotificationManager.IMPORTANCE_LOW
+        );
+        channel.setDescription(getResources().getString(R.string.mainNotificationChannelDescription));
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.createNotificationChannel(channel);
+        } else {
+            Log.e(LOG_TAG, "NotificationManager is null");
         }
     }
 }

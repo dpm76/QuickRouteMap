@@ -88,7 +88,7 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
             }
 
             @Override
-            public void onSatelliteStatusChanged(GnssStatus status) {
+            public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
                 super.onSatelliteStatusChanged(status);
             }
         };
