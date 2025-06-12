@@ -26,10 +26,6 @@ public class GuidancePointProximityService extends Service {
     private TextToSpeech _tts;
     private GuidancePointProximityManager _proximityManager;
 
-
-    public GuidancePointProximityService() {
-    }
-
     @Override
     public void onCreate() {
         super.onCreate();

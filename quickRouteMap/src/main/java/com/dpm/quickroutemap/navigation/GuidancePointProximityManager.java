@@ -26,11 +26,13 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
 
     private final LocationManager _locationManager;
     private final ProximityReceiver _proximityReceiver;
-    private final ArrayList<PendingIntent> _pIntentsCollection = new ArrayList<PendingIntent>();
+    private final ArrayList<PendingIntent> _pIntentsCollection = new ArrayList<>();
     private final ContextWrapper _context;
     private boolean _gpsReady = false;
     private boolean _gpsFixed = false;
     private final IGuidanceProvider _guidanceProvider;
+
+    private final GnssStatus.Callback _gnssStatusCallback;
 
 //	private final EventDispatcher<EventArgs> _routeChangedDispatcher = new EventDispatcher<EventArgs>() {
 //		
@@ -49,18 +51,19 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
         _locationManager = (LocationManager) _context.getSystemService(Context.LOCATION_SERVICE);
 
         if (_context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Log.e(LOG_TAG, "The application hasn't ACCESS_FINE_LOCATION permission!");
-            return;
+            Log.w(LOG_TAG, "The application hasn't ACCESS_FINE_LOCATION permission!");
         }
 
         _locationManager.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER, 1000, 10, this);
 
-        _locationManager.registerGnssStatusCallback(new Callback() {
+        Log.d(LOG_TAG, "Registering to GNSS-status events");
+
+        _gnssStatusCallback = new Callback() {
             @Override
             public void onStarted() {
 
-                Log.d(LOG_TAG, "GPS started");
+                Log.d(LOG_TAG, "GNSS started");
                 _gpsReady = true;
                 tts.speak("Sistema de ubicación iniciado", TextToSpeech.QUEUE_ADD, null);
                 if (_gpsFixed) {
@@ -70,7 +73,7 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
 
             @Override
             public void onStopped() {
-                Log.d(LOG_TAG, "GPS stopped");
+                Log.d(LOG_TAG, "GNSS stopped");
                 tts.speak("Sistema de ubicación detenido", TextToSpeech.QUEUE_ADD, null);
                 _gpsReady = false;
                 removeRouteGuidance();
@@ -78,7 +81,7 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
 
             @Override
             public void onFirstFix(int ttffMillis) {
-                Log.d(LOG_TAG, String.format("GPS first fix after %1$d seconds.", ttffMillis / 1000));
+                Log.d(LOG_TAG, String.format("GNSS first fix after %1$d seconds.", ttffMillis / 1000));
                 _gpsFixed = true;
                 tts.speak("Ubicación encontrada", TextToSpeech.QUEUE_ADD, null);
                 setCurrentRouteGuidance(_guidanceProvider.getCurrentRouteGuidance());
@@ -88,7 +91,8 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
             public void onSatelliteStatusChanged(GnssStatus status) {
                 super.onSatelliteStatusChanged(status);
             }
-        });
+        };
+        _locationManager.registerGnssStatusCallback(_gnssStatusCallback);
         _context.registerReceiver(_proximityReceiver, new IntentFilter(CONTENT_PROXIMITY_ALERT));
         //registerEvents();
     }
@@ -125,13 +129,13 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
     }
 
     private boolean hasAlerts() {
-        return (_pIntentsCollection.size() > 0);
+        return (!_pIntentsCollection.isEmpty());
     }
 
     private void removeRouteGuidance() {
         Log.d(LOG_TAG, "Eliminando ruta");
-        for (PendingIntent pIntent : _pIntentsCollection) {
-            _locationManager.removeProximityAlert(pIntent);
+        for (PendingIntent pendingIntent : _pIntentsCollection) {
+            _locationManager.removeProximityAlert(pendingIntent);
         }
         _pIntentsCollection.clear();
         _proximityReceiver.clear();
@@ -173,6 +177,7 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
         _context.unregisterReceiver(_proximityReceiver);
         removeRouteGuidance();
         _locationManager.removeUpdates(this);
+        _locationManager.unregisterGnssStatusCallback(_gnssStatusCallback);
         //unregisterEvents();
     }
 
