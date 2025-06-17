@@ -11,10 +11,18 @@
         android:layout_height="wrap_content"
         android:textSize="16sp" />
 
+    <CheckBox
+        android:id="@+id/no_show_on_startup"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:text="@string/app_info.no_show_on_startup.text" />
+
     <Button
         android:id="@+id/close_battery_info_button"
-        android:layout_width="match_parent"
+        android:layout_width="320dp"
+        android:layout_gravity="center"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Entendido" />
+        android:text="@string/app_info.close_battery_info_button.text" />
+
 </LinearLayout>

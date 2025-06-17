@@ -189,6 +189,11 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                 Toast.makeText(QuickRouteMapActivity.this, "No he podido leer ningún archivo", Toast.LENGTH_LONG).show();
             }
         });
+
+        if(!getSharedPreferences(AppInfoActivity.class.getSimpleName(), MODE_PRIVATE)
+                .getBoolean(AppInfoActivity.NO_SHOW_ON_STARTUP_PREFERENCE, false)){
+            showInfo();
+        }
     }
 
     private void saveState() {
@@ -295,6 +300,10 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         }
     }
 
+    private void showInfo() {
+        startActivity(new Intent(this, AppInfoActivity.class));
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -323,8 +332,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                 requestPermissionsManually();
                 break;
             case R.id.appInfoMenuItem:
-                Intent intent = new Intent(this, AppInfoActivity.class);
-                startActivity(intent);
+                showInfo();
                 break;
             case R.id.closeAppMenuItem:
                 stopService(new Intent(this, GuidancePointProximityService.class));

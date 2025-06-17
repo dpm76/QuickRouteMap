@@ -14,4 +14,6 @@
     <string name="mainNotificationChannelText">La aplicación actualizará la ubicación también en segundo plano.</string>
     <string name="mainNotificationChannelName">Notificaciones de ubicación</string>
     <string name="mainNotificationChannelDescription">Canal usado para permitir la ubicación mientras la app está en segundo plano.</string>
+    <string name="app_info.close_battery_info_button.text">Entendido</string>
+    <string name="app_info.no_show_on_startup.text">No mostrar al inicio</string>
 </resources>
