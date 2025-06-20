@@ -5,7 +5,10 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.IBinder;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
@@ -24,6 +27,8 @@ public class GuidancePointProximityService extends Service {
 
     private TextToSpeech _tts;
     private GuidancePointProximityManager _proximityManager;
+
+    private BroadcastReceiver _lowBatteryStateBroadcastReceiver;
 
     @Override
     public void onCreate() {
@@ -46,11 +51,22 @@ public class GuidancePointProximityService extends Service {
         Log.d(LOG_TAG, "Initialising proximity manager");
         _proximityManager = new GuidancePointProximityManager(GuidanceManager.getInstance(), _tts, this);
         GuidanceManager.getInstance().setConsumer(_proximityManager);
+
+        _lowBatteryStateBroadcastReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.i(LOG_TAG, "Low battery.");
+                _tts.speak("¡Atención! Batería baja.", TextToSpeech.QUEUE_ADD, null);
+            }
+        };
+        registerReceiver(_lowBatteryStateBroadcastReceiver,
+                new IntentFilter(Intent.ACTION_BATTERY_LOW));
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+        unregisterReceiver(_lowBatteryStateBroadcastReceiver);
         _proximityManager.close();
 
         _tts.stop();
