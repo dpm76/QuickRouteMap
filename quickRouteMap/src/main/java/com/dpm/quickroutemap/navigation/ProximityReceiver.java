@@ -19,9 +19,9 @@ public final class ProximityReceiver extends BroadcastReceiver {
 	
 	private static final int MAX_RECENT_QUEUE = 128;
 	
-	private final LinkedList<String> _recentGuidancePoints= new LinkedList<String>();
+	private final LinkedList<String> _recentGuidancePoints= new LinkedList<>();
 	
-	private TextToSpeech _tts;
+	private final TextToSpeech _tts;
 	
 	public ProximityReceiver(TextToSpeech tts){
 		_tts = tts;
@@ -45,7 +45,8 @@ public final class ProximityReceiver extends BroadcastReceiver {
 			if(entering && !isRecent(guidancePointKey)){
 				setAsRecent(guidancePointKey);
 				Log.i(LOG_TAG, String.format("TTS: %s", guidanceNarrative));
-				_tts.speak(guidanceNarrative, TextToSpeech.QUEUE_ADD, null);
+				_tts.speak(guidanceNarrative, TextToSpeech.QUEUE_ADD, null,
+						String.format("GUIDANCE_POINT_%1$s", guidancePointKey));
 			}else{
 				Log.d(LOG_TAG, "Esté saliendo o se ha reproducido recientemente.");
 			}

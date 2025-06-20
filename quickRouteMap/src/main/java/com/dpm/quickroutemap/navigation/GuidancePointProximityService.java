@@ -56,7 +56,8 @@ public class GuidancePointProximityService extends Service {
             @Override
             public void onReceive(Context context, Intent intent) {
                 Log.i(LOG_TAG, "Low battery.");
-                _tts.speak("¡Atención! Batería baja.", TextToSpeech.QUEUE_ADD, null);
+                _tts.speak("¡Atención! Batería baja.", TextToSpeech.QUEUE_ADD,
+                        null, "LOW_BATTERY");
             }
         };
         registerReceiver(_lowBatteryStateBroadcastReceiver,

@@ -65,7 +65,8 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
 
                 Log.d(LOG_TAG, "GNSS started");
                 _gpsReady = true;
-                tts.speak("Sistema de ubicación iniciado", TextToSpeech.QUEUE_ADD, null);
+                tts.speak("Sistema de ubicación iniciado", TextToSpeech.QUEUE_ADD, null,
+                        "GNSS_STARTED");
                 if (_gpsFixed) {
                     setCurrentRouteGuidance(_guidanceProvider.getCurrentRouteGuidance());
                 }
@@ -74,7 +75,7 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
             @Override
             public void onStopped() {
                 Log.d(LOG_TAG, "GNSS stopped");
-                tts.speak("Sistema de ubicación detenido", TextToSpeech.QUEUE_ADD, null);
+                tts.speak("Sistema de ubicación detenido", TextToSpeech.QUEUE_ADD, null, "GNSS_STOPPED");
                 _gpsReady = false;
                 removeRouteGuidance();
             }
@@ -83,7 +84,8 @@ public final class GuidancePointProximityManager implements IGuidanceConsumer, L
             public void onFirstFix(int ttffMillis) {
                 Log.d(LOG_TAG, String.format("GNSS first fix after %1$d seconds.", ttffMillis / 1000));
                 _gpsFixed = true;
-                tts.speak("Ubicación encontrada", TextToSpeech.QUEUE_ADD, null);
+                tts.speak("Ubicación encontrada", TextToSpeech.QUEUE_ADD, null,
+                        "GNSS_FIRST_FIX");
                 setCurrentRouteGuidance(_guidanceProvider.getCurrentRouteGuidance());
             }
 
