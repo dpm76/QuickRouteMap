@@ -10,8 +10,8 @@ android {
         applicationId "com.dpm.quickroutemap"
         minSdk 33
         targetSdk 33
-        versionCode 20231100
-        versionName "0.5.0-DEV"
+        versionCode 20251119
+        versionName "0.5.0"
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
