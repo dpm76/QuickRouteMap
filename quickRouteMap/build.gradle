@@ -4,8 +4,8 @@ plugins {
 
 android {
     namespace 'com.dpm.quickroutemap'
+    compileSdk 36
 
-    compileSdk 33
 
     defaultConfig {
         applicationId "com.dpm.quickroutemap"
@@ -23,14 +23,14 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     buildFeatures{
         buildConfig true
     }
-    buildToolsVersion '33.0.0'
+    buildToolsVersion '36.1.0'
 }
 
 dependencies {

@@ -4,8 +4,8 @@ plugins {
 
 android {
     namespace 'com.dpm.framework'
+    compileSdk 36
 
-    compileSdk 33
 
     defaultConfig {
         minSdk 32
@@ -24,10 +24,10 @@ android {
         buildConfig true
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
-    buildToolsVersion '33.0.0'
+    buildToolsVersion '36.1.0'
 }
 
 dependencies {
