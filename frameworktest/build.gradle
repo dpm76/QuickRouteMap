@@ -4,11 +4,9 @@ plugins {
 
 android {
     namespace 'com.dpm.frameworktest'
-    compileSdk 33
 
     defaultConfig {
         minSdk 32
-        targetSdk 33
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
@@ -22,6 +20,18 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    lint {
+        targetSdk 33
+    }
+
+    buildFeatures{
+        buildConfig true
+    }
+    compileSdk {
+        version = release(36)
+    }
+    buildToolsVersion '36.1.0'
+    ndkVersion '29.0.14206865'
 }
 
 dependencies {
