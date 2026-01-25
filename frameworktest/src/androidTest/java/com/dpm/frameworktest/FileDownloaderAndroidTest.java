@@ -1,12 +1,17 @@
 package com.dpm.frameworktest;
 
+import android.content.Context;
+
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.rule.GrantPermissionRule;
 
 import com.dpm.framework.FileDownloader;
 import com.dpm.framework.FileHelper;
 
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -21,13 +26,18 @@ import java.util.Objects;
 @LargeTest
 public class FileDownloaderAndroidTest {
 
-    //TODO DPM 20230214: mirar por qué no se pueden crear archivos o directorios desde frameworktest
-    // pero sí desde los tests de quickRouteMap. ¿Faltan permisos?
-    //@Test
+    @Rule
+    public GrantPermissionRule permissionRule = androidx.test.rule.GrantPermissionRule.grant(
+            android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+    );
+
+    @Test
     public void givenAPath_writeFile_fileIsWritten(){
 
-        final String rootPath = String.format("/storage/emulated/0/%1$s",
-                Objects.requireNonNull(getClass().getPackage()).getName());
+        final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        final String rootPath = Objects.requireNonNull(context.getExternalFilesDir(null))
+                .getAbsolutePath() + "/testRoot";
         final String path = String.format("%1$s/tiles/12/123/", rootPath);
         final String fileName = "test.txt";
         final String fileContent = "abcde1234";
@@ -65,12 +75,13 @@ public class FileDownloaderAndroidTest {
     @Test
     public void tileUrl_downloadFile_createsTileFile() {
 
-        final String  packageName = Objects.requireNonNull(getClass().getPackage()).getName();
-        final String rootPath = String.format("/sdcard/Android/data/%1$s/files/tiles",
-                packageName);
+        final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        final String rootPath = Objects.requireNonNull(context.getExternalFilesDir(null))
+                .getAbsolutePath() + "/testRoot";
         final String filePath = String.format("%1$s/tile-test.png", rootPath);
         final String sourceUrl = "https://b.tile.openstreetmap.org/12/2137/1417.png";
 
+        final String  packageName = Objects.requireNonNull(getClass().getPackage()).getName();
         FileDownloader.download(packageName, sourceUrl, filePath);
 
         File tileFile = new File(filePath);

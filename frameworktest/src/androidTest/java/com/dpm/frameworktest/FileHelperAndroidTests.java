@@ -1,11 +1,16 @@
 package com.dpm.frameworktest;
 
+import android.content.Context;
+
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.rule.GrantPermissionRule;
 
 import com.dpm.framework.FileHelper;
 
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -14,18 +19,24 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
+import java.util.Objects;
 
 @RunWith(AndroidJUnit4.class)
 @LargeTest
 public class FileHelperAndroidTests {
 
-    //TODO DPM 20230214: mirar por qué no se pueden crear archivos o directorios desde frameworktest
-    // pero sí desde los tests de quickRouteMap. ¿Faltan permisos?
+    @Rule
+    public GrantPermissionRule permissionRule = androidx.test.rule.GrantPermissionRule.grant(
+            android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+    );
 
     @Test
     public void givenAPath_writeFile_fileIsWritten(){
 
-        final String rootPath = "/sdcard/Android/data/" + getClass().getPackage().getName();
+        final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        final String rootPath = Objects.requireNonNull(context.getExternalFilesDir(null))
+                .getAbsolutePath() + "/testRoot";
         final String path = rootPath + "/tiles/12/123/";
         final String fileName = "test.txt";
         final String fileContent = "abcde1234";
