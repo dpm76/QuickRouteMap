@@ -1,7 +1,6 @@
 package com.dpm.quickroutemap;
 
 import android.graphics.Point;
-import android.os.Environment;
 import android.util.Log;
 
 import com.dpm.framework.Event;
@@ -20,7 +19,6 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -36,9 +34,8 @@ public final class TilesFetcher{
 	
 	private final static String LOG_TAG = TilesFetcher.class.getSimpleName();
 	private final static long STORED_TILES_TIMEOUT = 2592000000L; //30 días en milisegundos
-	private final static String QRM_TILES_CACHE_RELATIVE_PATH = "/QuickRouteMaps/tiles";
 
-	/**
+    /**
 	 * Cuando avanza la descarga de mapas.
 	 * Los avances están referidos en porcentajes del total, por lo que el trabajo estará finalizado
 	 * cuando el avance total sea del 100%.
@@ -74,32 +71,33 @@ public final class TilesFetcher{
      * 		Indica si el dispositivo tiene conexión de red de datos
      */
     public void fetchTiles(final Route route, final int zoomLevel, final boolean hasDataNetwork){
-    	ExecutorService executor = Executors.newSingleThreadExecutor();
-		executor.submit(new Runnable() {
-			public void run() {
-				final HashMap<String, Integer[]> tilesMap = new HashMap<>();
-				for(IGeoPoint waypoint: route.getWayPoints()){
-					Point pixelCoord =
-							TileSystem.LatLongToPixelXY(waypoint.getLatitudeE6() / 1E6, waypoint.getLongitudeE6() / 1E6, zoomLevel, null);
-			    	Point tileCoord = TileSystem.PixelXYToTileXY(pixelCoord.x, pixelCoord.y, null);
-			    	int mapTileUpperBound = 1 << zoomLevel;
-			    	
-			    	// Construct a MapTile to request from the tile provider.
-			        int tileY = MyMath.mod(tileCoord.y, mapTileUpperBound);
-			        int tileX = MyMath.mod(tileCoord.x, mapTileUpperBound);
-			        String key = String.format(Locale.US, "%1$d,%2$d", tileX, tileY);
-			        if(!tilesMap.containsKey(key)){
-			        	tilesMap.put(key, new Integer[]{tileX, tileY});
-			        }
-				}
-		        
-				for(Integer[] tileCoord: tilesMap.values()){
-					fetchWaypointTile(tileCoord[0], tileCoord[1], zoomLevel, hasDataNetwork);
-				}
-				FetchFinished.rise(this, EventArgs.empty);
-			}
-		});
-    	executor.shutdown();
+        try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
+            executor.submit(new Runnable() {
+                public void run() {
+                    final HashMap<String, Integer[]> tilesMap = new HashMap<>();
+                    for (IGeoPoint waypoint : route.getWayPoints()) {
+                        Point pixelCoord =
+                                TileSystem.LatLongToPixelXY(waypoint.getLatitudeE6() / 1E6, waypoint.getLongitudeE6() / 1E6, zoomLevel, null);
+                        Point tileCoord = TileSystem.PixelXYToTileXY(pixelCoord.x, pixelCoord.y, null);
+                        int mapTileUpperBound = 1 << zoomLevel;
+
+// Construct a MapTile to request from the tile provider.
+                        int tileY = MyMath.mod(tileCoord.y, mapTileUpperBound);
+                        int tileX = MyMath.mod(tileCoord.x, mapTileUpperBound);
+                        String key = String.format(Locale.US, "%1$d,%2$d", tileX, tileY);
+                        if (!tilesMap.containsKey(key)) {
+                            tilesMap.put(key, new Integer[]{tileX, tileY});
+                        }
+                    }
+
+                    for (Integer[] tileCoord : tilesMap.values()) {
+                        fetchWaypointTile(tileCoord[0], tileCoord[1], zoomLevel, hasDataNetwork);
+                    }
+                    FetchFinished.rise(this, EventArgs.empty);
+                }
+            });
+            executor.shutdown();
+        }
     }
     
     private void fetchWaypointTile(int tileX, int tileY, int zoomLevel, boolean hasDataNetwork){

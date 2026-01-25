@@ -319,27 +319,18 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                 Objects.requireNonNull(item.getTitle())));
 
         switch (item.getItemId()) {
-            case R.id.userCenterMenuItem:
-                centerAtUserLocation();
-                break;
-            case R.id.openRouteFileMenuItem:
-                launchRouteFileBrowser();
-                break;
-            case R.id.resetZoomMenuItem:
-                _mapController.setZoom(DEFAULT_ZOOM);
-                break;
-            case R.id.locationPermissionMenuItem:
-                requestPermissionsManually();
-                break;
-            case R.id.appInfoMenuItem:
-                showInfo();
-                break;
-            case R.id.closeAppMenuItem:
+            case R.id.userCenterMenuItem -> centerAtUserLocation();
+            case R.id.openRouteFileMenuItem -> launchRouteFileBrowser();
+            case R.id.resetZoomMenuItem -> _mapController.setZoom(DEFAULT_ZOOM);
+            case R.id.locationPermissionMenuItem -> requestPermissionsManually();
+            case R.id.appInfoMenuItem -> showInfo();
+            case R.id.closeAppMenuItem -> {
                 stopService(new Intent(this, GuidancePointProximityService.class));
                 finish();
-                break;
-            default:
+            }
+            default -> {
                 return super.onOptionsItemSelected(item);
+            }
         }
         return true;
     }

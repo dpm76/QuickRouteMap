@@ -31,14 +31,18 @@ public class AppInfoActivity extends Activity {
                 getSharedPreferences(AppInfoActivity.class.getSimpleName(), MODE_PRIVATE).getBoolean(NO_SHOW_ON_STARTUP_PREFERENCE, false));
 
         infoText.setText(
-                "Para asegurar que esta aplicación funcione correctamente en segundo plano:\n\n" +
-                        "1. Ve a Ajustes > Aplicaciones > QuickRouteMap > Batería.\n" +
-                        "2. Desactiva la optimización de batería.\n" +
-                        "3. Desactiva el modo de ahorro de energía del móvil para que funcione con la pantalla apagada.\n" +
-                        "En dispositivos Samsung:\n" +
-                        "   - Ajustes > Cuidado del dispositivo > Batería > Aplicaciones que nunca se suspenden.\n" +
-                        "   - Añade esta aplicación a la lista."
-        );
+"""
+Para asegurar que esta aplicación funcione correctamente en segundo plano:
+
+    1. Ve a Ajustes > Aplicaciones > QuickRouteMap > Batería.
+    2. Desactiva la optimización de batería.
+    3. Desactiva el modo de ahorro de energía del móvil para que funcione con la pantalla apagada.
+
+En dispositivos Samsung:
+
+   - Ajustes > Cuidado del dispositivo > Batería > Aplicaciones que nunca se suspenden.
+   - Añade esta aplicación a la lista.
+""");
 
         closeButton.setOnClickListener(view -> finish());
     }

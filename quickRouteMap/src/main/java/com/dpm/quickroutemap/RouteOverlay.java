@@ -1,18 +1,17 @@
 package com.dpm.quickroutemap;
 
-import java.util.List;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.Point;
+
+import com.dpm.quickroutemap.navigation.Route;
 
 import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Overlay;
 
-import com.dpm.quickroutemap.navigation.Route;
-
-import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Path;
-import android.graphics.Point;
+import java.util.List;
 
 /**
  * Capa de ruta

@@ -1,9 +1,5 @@
 package com.dpm.quickroutemap;
 
-import org.osmdroid.views.MapView;
-import org.osmdroid.views.Projection;
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.hardware.Sensor;
@@ -14,6 +10,10 @@ import android.location.Location;
 import android.view.Display;
 import android.view.Surface;
 import android.view.WindowManager;
+
+import org.osmdroid.views.MapView;
+import org.osmdroid.views.Projection;
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
 public class ExtendedMyLocationNewOverlay extends MyLocationNewOverlay implements SensorEventListener{
 
@@ -52,25 +52,14 @@ public class ExtendedMyLocationNewOverlay extends MyLocationNewOverlay implement
 	 */
 	private float getCurrentOrientation(){
 		
-		float offset;
+		float offset = switch (_display.getRotation()) {
+            case Surface.ROTATION_90 -> 90f;
+            case Surface.ROTATION_180 -> 180f;
+            case Surface.ROTATION_270 -> 270f;
+            default -> 0f;
+        };
 
-		switch (_display.getRotation()) {
-			case Surface.ROTATION_90:
-				offset = 90f;
-				break;
-			case Surface.ROTATION_180:
-				offset = 180f;
-				break;
-			case Surface.ROTATION_270:
-				offset = 270f;
-				break;
-			case Surface.ROTATION_0:
-			default:
-				offset = 0f;
-				break;
-		}
-		
-		return _azimuth + offset;
+        return _azimuth + offset;
 	}
 	
 	@Override

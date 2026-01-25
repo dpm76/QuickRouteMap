@@ -63,9 +63,4 @@ public class GuidancePointProximityManagerAndroidTest {
 
         Assert.assertEquals(guidancePoints.length, _manager.countProximityAlerts());
     }
-
-    @Test
-    public void setPosition(){
-        Assert.fail("Not yet implemented");
-    }
 }
