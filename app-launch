@@ -1,0 +1,109 @@
+#!/bin/bash
+
+# --- Dynamic Path Detection ---
+# 1. Try to get Android SDK from local.properties if not defined
+if [ -z "$ANDROID_HOME" ]; then
+    if [ -f "local.properties" ]; then
+        # Extract sdk.dir and clean possible spaces or carriage returns
+        ANDROID_HOME=$(grep '^sdk.dir' local.properties | cut -d'=' -f2 | tr -d '\r' | xargs)
+    fi
+fi
+
+# 2. Add platform-tools to PATH if SDK is detected
+if [ -n "$ANDROID_HOME" ] && [ -d "$ANDROID_HOME/platform-tools" ]; then
+    export PATH="$ANDROID_HOME/platform-tools:$PATH"
+fi
+
+# 3. Try to locate Android Studio JDK (JBR) if JAVA_HOME is not defined
+if [ -z "$JAVA_HOME" ]; then
+    STUDIO_BIN=$(which android-studio 2>/dev/null || which studio 2>/dev/null)
+    if [ -n "$STUDIO_BIN" ]; then
+        # Follow link if necessary to find the base installation folder
+        STUDIO_PATH=$(readlink -f "$STUDIO_BIN")
+        STUDIO_DIR=$(dirname "$(dirname "$STUDIO_PATH")")
+        if [ -d "$STUDIO_DIR/jbr" ]; then
+            export JAVA_HOME="$STUDIO_DIR/jbr"
+        fi
+    fi
+fi
+
+# Verify minimum requirements
+if ! command -v adb &> /dev/null; then
+    echo "⚠️  Warning: 'adb' not found in PATH or ANDROID_HOME/platform-tools."
+fi
+
+
+# 1. Get device list (only those that are 'device')
+DEVICES=($(adb devices | grep -v "List" | grep "device$" | awk '{print $1}'))
+
+if [ ${#DEVICES[@]} -eq 0 ]; then
+    echo "❌ Error: No devices or emulators detected."
+    echo "Make sure the emulator is running."
+    exit 1
+fi
+
+# 2. Device selection
+if [ -n "$1" ]; then
+    # If ID is passed as first argument
+    DEVICE_ID=$1
+else
+    # If only one device, select it automatically
+    if [ ${#DEVICES[@]} -eq 1 ]; then
+        DEVICE_ID=${DEVICES[0]}
+    else
+        # If multiple devices, prompt user
+        echo "📱 Multiple devices detected:"
+        for i in "${!DEVICES[@]}"; do
+            echo "$((i+1))) ${DEVICES[$i]}"
+        done
+        echo -n "Choose a device (1-${#DEVICES[@]}): "
+        read CHOICE
+        
+        # Validate selection
+        if [[ ! "$CHOICE" =~ ^[0-9]+$ ]] || [ "$CHOICE" -lt 1 ] || [ "$CHOICE" -gt "${#DEVICES[@]}" ]; then
+            echo "❌ Invalid selection."
+            exit 1
+        fi
+        DEVICE_ID=${DEVICES[$((CHOICE-1))]}
+    fi
+fi
+
+echo "🚀 Using device: $DEVICE_ID"
+
+# 3. Compile and install specifically on that device
+echo "🛠️  Compiling and installing..."
+./gradlew :quickRouteMap:installDebug -Pandroid.injected.serial="$DEVICE_ID"
+
+if [ $? -ne 0 ]; then
+    echo "❌ Error during compilation or installation."
+    exit 1
+fi
+
+# 4. Launch the application
+echo "⚡ Launching application..."
+adb -s "$DEVICE_ID" shell am start -n com.dpm.quickroutemap/com.dpm.quickroutemap.QuickRouteMapActivity
+
+echo "✅ Ready!"
+
+# 5. View process logs (filtered by app)
+echo "📜 Waiting for process to start to show logs..."
+
+# Polling loop to detect PID (max 10 seconds)
+MAX_RETRIES=10
+PID=""
+for ((i=1; i<=MAX_RETRIES; i++)); do
+    PID=$(adb -s "$DEVICE_ID" shell pidof -s com.dpm.quickroutemap | tr -d '\r' | xargs)
+    if [ -n "$PID" ]; then
+        break
+    fi
+    sleep 1
+done
+
+if [ -n "$PID" ]; then
+    echo "📊 PID detected: $PID. Starting logcat..."
+    # Use logcat --pid with the detected PID
+    adb -s "$DEVICE_ID" logcat --pid="$PID"
+else
+    echo "⚠️  Could not detect application PID after 10 seconds. Showing general logcat..."
+    adb -s "$DEVICE_ID" logcat com.dpm.quickroutemap:V *:S
+fi
