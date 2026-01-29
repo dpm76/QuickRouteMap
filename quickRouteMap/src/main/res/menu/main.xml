@@ -16,6 +16,11 @@
 		android:title="@string/openRouteFileMenuItemLabel"
 		app:showAsAction="ifRoom" />
 	<item
+		android:id="@+id/editRouteMenuItem"
+		android:icon="@android:drawable/ic_menu_edit"
+		android:title="@string/editRoute"
+		app:showAsAction="ifRoom" />
+	<item
 		android:id="@+id/locationPermissionMenuItem"
 		android:icon="@android:drawable/ic_menu_manage"
 		android:title="@string/locationPermissionMenuItemLabel"
@@ -31,4 +36,3 @@
 		android:title="@string/appCloseMenuItemLabel"
 		app:showAsAction="ifRoom" />
 </menu>
-    

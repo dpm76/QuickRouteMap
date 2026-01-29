@@ -75,6 +75,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private static final String INTERNAL_STATE_CENTER_LON_KEY = "center_lon";
     private static final String INTERNAL_STATE_CENTER_LAT_KEY = "center_lat";
     private static Route _currentRoute; //TODO La ruta se debe guardar en _instanceState para recuperarla en onResume()
+    private static Uri _currentRouteUri;
 
     private final HashMap<String, RouteOverlay> _routeOverlaysMap = new HashMap<>();
 
@@ -90,6 +91,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
     private Gson _routeSerializer;
     private FilePicker _filePicker;
+    private Menu _menu;
 
     private String getDataPath(){
 
@@ -180,8 +182,8 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
         _filePicker = new FilePicker(this, new FilePicker.IFilePickerCallback() {
             @Override
-            public void onFileOpened(BufferedReader reader) {
-                loadRoute(reader);
+            public void onFileOpened(BufferedReader reader, Uri uri) {
+                loadRoute(reader, uri);
             }
 
             @Override
@@ -247,9 +249,10 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         _routeOverlaysMap.clear();
     }
 
-    private void loadRoute(BufferedReader reader) {
+    private void loadRoute(BufferedReader reader, Uri uri) {
 
         Log.d(LOG_TAG, "loadRoute()");
+        _currentRouteUri = uri;
         clear();
 
         //Añadir rutas
@@ -273,8 +276,9 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
             IGeoPoint center = _currentRoute.getWayPoints().get(0);
             _mapController.setCenter(center);
             saveMapState(center.getLatitude(), center.getLongitude(), _mapView.getZoomLevelDouble());
-        } catch (JsonIOException e) {
-            Log.e(LOG_TAG, "No se ha añadido la ruta");
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "No se ha podido cargar la ruta", e);
+            Toast.makeText(this, "Error al cargar el archivo JSON o la ruta", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -308,7 +312,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
-
+        this._menu = menu;
         return true;
     }
 
@@ -321,6 +325,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         switch (item.getItemId()) {
             case R.id.userCenterMenuItem -> centerAtUserLocation();
             case R.id.openRouteFileMenuItem -> launchRouteFileBrowser();
+            case R.id.editRouteMenuItem -> toggleEditMode();
             case R.id.resetZoomMenuItem -> _mapController.setZoom(DEFAULT_ZOOM);
             case R.id.locationPermissionMenuItem -> requestPermissionsManually();
             case R.id.appInfoMenuItem -> showInfo();
@@ -333,6 +338,144 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
             }
         }
         return true;
+    }
+
+    private void toggleEditMode() {
+        if (_currentRoute == null) {
+            Toast.makeText(this, "No hay ninguna ruta cargada para editar", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        RouteOverlay overlay = _routeOverlaysMap.get(_currentRoute.getKey());
+        if (overlay != null) {
+            boolean newMode = !overlay.isEditMode();
+            if (newMode) {
+                applyEditMode(overlay, true);
+            } else {
+                showSaveOptionsDialog(overlay);
+            }
+        }
+    }
+
+    private void applyEditMode(RouteOverlay overlay, boolean newMode) {
+        overlay.setEditMode(newMode);
+        _mapView.invalidate();
+
+        if (_menu != null) {
+            MenuItem item = _menu.findItem(R.id.editRouteMenuItem);
+            if (item != null) {
+                item.setTitle(newMode ? R.string.finishEditingRoute : R.string.editRoute);
+            }
+        }
+        
+        if (newMode) {
+            Toast.makeText(this, "Modo edición activado", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showSaveOptionsDialog(final RouteOverlay overlay) {
+        String[] options = {
+                getString(R.string.saveOptionOriginal),
+                getString(R.string.saveOptionNew),
+                getString(R.string.saveOptionCancel)
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.saveChangesTitle)
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0: // Save to original
+                            saveRoute(_currentRouteUri);
+                            applyEditMode(overlay, false);
+                            break;
+                        case 1: // Save as new
+                            showSaveAsDialog(overlay);
+                            break;
+                        case 2: // Exit without saving
+                            applyEditMode(overlay, false);
+                            Toast.makeText(this, R.string.routeNotSaved, Toast.LENGTH_SHORT).show();
+                            break;
+                    }
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    private void showSaveAsDialog(final RouteOverlay overlay) {
+        final android.widget.EditText input = new android.widget.EditText(this);
+        String currentName = _currentRoute.getName();
+        if (currentName == null || currentName.isEmpty()) {
+            currentName = getFileName(_currentRouteUri);
+            if (currentName != null && currentName.contains(".")) {
+                currentName = currentName.substring(0, currentName.lastIndexOf('.'));
+            }
+            if (currentName == null) currentName = "Ruta";
+        }
+        input.setText(String.format("%s_editada", currentName));
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.newFileNameTitle)
+                .setView(input)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    String fileName = input.getText().toString();
+                    if (!fileName.toLowerCase().endsWith(".json")) {
+                        fileName += ".json";
+                    }
+                    _filePicker.createFile(fileName);
+                    applyEditMode(overlay, false);
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void saveRoute(Uri uri) {
+        if (uri == null) {
+            Toast.makeText(this, R.string.saveError, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Asegurar que las propiedades requeridas están presentes
+        String fallbackName = getFileName(uri);
+        if (fallbackName != null && fallbackName.contains(".")) {
+            fallbackName = fallbackName.substring(0, fallbackName.lastIndexOf('.'));
+        }
+        com.dpm.quickroutemap.navigation.RouteUtils.populateMissingProperties(_currentRoute, fallbackName);
+
+        // _totalDistance y _totalTime ya son double (primitivos o se cargaron)
+        // Pero el usuario pidió copiar el valor anterior si existía (Gson lo hace)
+        // o usar 0 (valor por defecto de double en Java es 0.0)
+
+        // _isClosed es boolean, valor por defecto false si no se carga.
+
+        String json = _routeSerializer.toJson(_currentRoute);
+        if (_filePicker.saveToFile(uri, json)) {
+            _currentRouteUri = uri;
+            Toast.makeText(this, R.string.saveSuccess, Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, R.string.saveError, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String getFileName(Uri uri) {
+        String result = null;
+        if (uri.getScheme().equals("content")) {
+            try (android.database.Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                    if (index != -1) {
+                        result = cursor.getString(index);
+                    }
+                }
+            }
+        }
+        if (result == null) {
+            result = uri.getPath();
+            int cut = result.lastIndexOf('/');
+            if (cut != -1) {
+                result = result.substring(cut + 1);
+            }
+        }
+        return result;
     }
 
     private void centerAtUserLocation() {
@@ -511,8 +654,12 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == FilePicker.PICK_FILE_REQUEST_CODE && resultCode == RESULT_OK && data != null) {
-            _filePicker.handleFileResult(data);
+        if (resultCode == RESULT_OK && data != null) {
+            if (requestCode == FilePicker.PICK_FILE_REQUEST_CODE) {
+                _filePicker.handleFileResult(data);
+            } else if (requestCode == FilePicker.CREATE_FILE_REQUEST_CODE) {
+                saveRoute(data.getData());
+            }
         }
     }
 }
