@@ -7,10 +7,21 @@ public class GuidancePoint {
 	
 	private final static int DEFAULT_RADIUS = 500;
 	
-	private final String _key;
-	private final IGeoPoint _point;
-	private final String _narrative;
-	private final int _radius;
+	@com.google.gson.annotations.SerializedName("_key")
+	private String _key;
+	@com.google.gson.annotations.SerializedName("_point")
+	private IGeoPoint _point;
+	@com.google.gson.annotations.SerializedName("_narrative")
+	private String _narrative;
+	@com.google.gson.annotations.SerializedName("_radius")
+	private int _radius;
+
+	public GuidancePoint() {
+		_key = null;
+		_point = null;
+		_narrative = null;
+		_radius = DEFAULT_RADIUS;
+	}
 
 	public GuidancePoint(String key, double latitude, double longitude, String narrative) {
 		this(key, latitude, longitude, narrative, DEFAULT_RADIUS);
