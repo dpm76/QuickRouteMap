@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# --- Java Detection ---
+if [ -z "$JAVA_HOME" ]; then
+    STUDIO_BIN=$(which android-studio 2>/dev/null || which studio 2>/dev/null)
+    if [ -n "$STUDIO_BIN" ]; then
+        STUDIO_PATH=$(readlink -f "$STUDIO_BIN")
+        STUDIO_DIR=$(dirname "$(dirname "$STUDIO_PATH")")
+        if [ -d "$STUDIO_DIR/jbr" ]; then
+            export JAVA_HOME="$STUDIO_DIR/jbr"
+        fi
+    fi
+fi
+
+# If still not found, check if common location for this environment exists
+if [ -z "$JAVA_HOME" ] && [ -d "/opt/android-studio/jbr" ]; then
+    export JAVA_HOME="/opt/android-studio/jbr"
+fi
+
+if [ -n "$JAVA_HOME" ]; then
+    echo "☕ Using JAVA_HOME: $JAVA_HOME"
+else
+    echo "⚠️  JAVA_HOME not set and could not be detected automatically. Default 'java' will be used."
+fi
+
+# --- Run Tests ---
+FAILED=0
+
+echo "🧪 Running all unit tests (local)..."
+./gradlew test || FAILED=1
+
+echo ""
+echo "📱 Checking for connected devices for instrumented tests..."
+# Check for any device or emulator
+ADB_DEVICES=$(adb devices | grep -v "List" | grep "device$" | awk '{print $1}')
+
+if [ -n "$ADB_DEVICES" ]; then
+    echo "🚀 Devices detected: $ADB_DEVICES"
+    echo "🧪 Running instrumented tests (on device)..."
+    ./gradlew connectedDebugAndroidTest || FAILED=1
+else
+    echo "⚠️  No connected devices found. Skipping instrumented tests."
+    echo "To run instrumented tests, start an emulator or connect a real device."
+fi
+
+if [ $FAILED -eq 0 ]; then
+    echo ""
+    echo "✅ All tests completed successfully!"
+else
+    echo ""
+    echo "❌ Some tests failed."
+fi
+
+echo ""
+echo "📊 Reports available at:"
+echo "------------------------------------------------------------"
+echo "🖥️  Local Unit Tests: file://$(pwd)/quickRouteMap/build/reports/tests/testDebugUnitTest/index.html"
+
+if [ -n "$ADB_DEVICES" ]; then
+    echo "📱 Instrumented Tests: file://$(pwd)/quickRouteMap/build/reports/androidTests/connected/debug/index.html"
+fi
+echo "------------------------------------------------------------"
+
+if [ $FAILED -ne 0 ]; then
+    exit 1
+fi
