@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# --- Dynamic Path Detection ---
+if [ -z "$ANDROID_HOME" ] && [ -f "local.properties" ]; then
+    ANDROID_HOME=$(grep '^sdk.dir' local.properties | cut -d'=' -f2 | tr -d '\r' | xargs)
+fi
+
+if [ -n "$ANDROID_HOME" ] && [ -d "$ANDROID_HOME/platform-tools" ]; then
+    export PATH="$ANDROID_HOME/platform-tools:$PATH"
+fi
+
+
+# 1. Get device list
+DEVICES=($(adb devices | grep -v "List" | grep "device$" | awk '{print $1}'))
+
+if [ ${#DEVICES[@]} -eq 0 ]; then
+    echo "❌ No devices connected."
+    exit 1
+fi
+
+# 2. Device selection
+if [ -n "$1" ]; then
+    DEVICE_ID=$1
+else
+    if [ ${#DEVICES[@]} -eq 1 ]; then
+        DEVICE_ID=${DEVICES[0]}
+    else
+        echo "📱 Select device to stop the app:"
+        for i in "${!DEVICES[@]}"; do
+            echo "$((i+1))) ${DEVICES[$i]}"
+        done
+        read -p "Choose (1-${#DEVICES[@]}): " CHOICE
+        DEVICE_ID=${DEVICES[$((CHOICE-1))]}
+    fi
+fi
+
+# 3. Stop the application
+PACKAGE_NAME="com.dpm.quickroutemap"
+echo "🛑 Stopping $PACKAGE_NAME on $DEVICE_ID..."
+adb -s "$DEVICE_ID" shell am force-stop "$PACKAGE_NAME"
+
+if [ $? -eq 0 ]; then
+    echo "✅ Application stopped successfully."
+else
+    echo "❌ Error trying to stop the application."
+fi
