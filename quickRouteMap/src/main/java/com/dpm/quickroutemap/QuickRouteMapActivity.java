@@ -370,6 +370,9 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         
         if (newMode) {
             Toast.makeText(this, "Modo edición activado", Toast.LENGTH_SHORT).show();
+        } else {
+            // Actualizar los puntos de guiado en el gestor de proximidad al terminar de editar
+            _guidanceManager.setCurrentRouteGuidance(_currentRoute.getGuidancePoints());
         }
     }
 

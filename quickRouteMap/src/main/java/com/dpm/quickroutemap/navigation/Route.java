@@ -120,6 +120,10 @@ public class Route {
 		this._wayPoints = wayPoints;
 	}
 
+	public void setGuidancePoints(GuidancePoint[] guidancePoints) {
+		this._guidancePoints = guidancePoints;
+	}
+
 	public double getTotalDistance() {
 		return _totalDistance;
 	}

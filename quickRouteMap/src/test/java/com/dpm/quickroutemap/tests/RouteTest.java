@@ -55,4 +55,22 @@ public class RouteTest {
         Assert.assertEquals(50.0, route.getTotalDistance(), 0.0);
         Assert.assertEquals(120.0, route.getTotalTime(), 0.0);
     }
+
+    @Test
+    public void setGuidancePoints_ValidArray_UpdatesGuidancePoints() {
+        Route route = new Route();
+        GuidancePoint[] initialPoints = new GuidancePoint[]{new GuidancePoint("g1", 1.0, 1.0, "1")};
+        route.setGuidancePoints(initialPoints);
+        Assert.assertArrayEquals(initialPoints, route.getGuidancePoints());
+
+        GuidancePoint[] newPoints = new GuidancePoint[]{
+                new GuidancePoint("g2", 2.0, 2.0, "2"),
+                new GuidancePoint("g3", 3.0, 3.0, "3")
+        };
+        route.setGuidancePoints(newPoints);
+        
+        Assert.assertEquals(2, route.getGuidancePoints().length);
+        Assert.assertEquals("g2", route.getGuidancePoints()[0].getKey());
+        Assert.assertEquals("g3", route.getGuidancePoints()[1].getKey());
+    }
 }
