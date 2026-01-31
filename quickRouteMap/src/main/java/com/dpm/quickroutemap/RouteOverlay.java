@@ -12,6 +12,7 @@ import android.graphics.PorterDuffColorFilter;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.MotionEvent;
+import android.graphics.RectF;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
@@ -76,6 +77,17 @@ public class RouteOverlay extends Overlay {
 	private final int _editIconSize = 80;
 	private final int _warningIconSize = 30;
 
+	// Variables para el menú contextual
+	private boolean _showContextButtons = false;
+	private IGeoPoint _contextMenuGeoPosition = null;
+	private final Point _contextMenuScreenPos = new Point();
+	private final int _contextButtonSize = 100;
+	private final int _contextButtonSpacing = 40;
+	private final Point _guidanceButtonPos = new Point();
+	private final Point _geometryButtonPos = new Point();
+	private final Paint _contextButtonPaint = new Paint();
+	private final Paint _contextIconPaint = new Paint();
+
 	private final Runnable _longPressRunnable = new Runnable() {
 		@Override
 		public void run() {
@@ -136,6 +148,18 @@ public class RouteOverlay extends Overlay {
 		_warningRadiusPaint.setAntiAlias(true);
 
 		_editIconPaint.setColorFilter(new PorterDuffColorFilter(Color.rgb(0, 120, 255), PorterDuff.Mode.SRC_IN));
+
+		_contextButtonPaint.setColor(Color.WHITE);
+		_contextButtonPaint.setStyle(Paint.Style.FILL);
+		_contextButtonPaint.setShadowLayer(10, 0, 0, Color.BLACK);
+		_contextButtonPaint.setAntiAlias(true);
+
+		_contextIconPaint.setColor(Color.BLACK);
+		_contextIconPaint.setStyle(Paint.Style.STROKE);
+		_contextIconPaint.setStrokeWidth(5);
+		_contextIconPaint.setAntiAlias(true);
+		_contextIconPaint.setStrokeCap(Paint.Cap.ROUND);
+		_contextIconPaint.setStrokeJoin(Paint.Join.ROUND);
 
 		_route = route;
 	}
@@ -222,7 +246,11 @@ public class RouteOverlay extends Overlay {
 					}
 				}
 			}
-		}		
+		}
+
+		if (_showContextButtons && _contextMenuGeoPosition != null) {
+			drawContextButtons(canvas, mapView);
+		}
 	}
 
 	private void drawDeleteIcon(Canvas canvas, Point pointPos) {
@@ -336,8 +364,10 @@ public class RouteOverlay extends Overlay {
 			_isMoving = false;
 			_draggedPointIndex = -1;
 			_draggedGuidancePointIndex = -1;
+			_draggedGuidancePointIndex = -1;
 			_resizingGuidancePointIndex = -1;
 			_handler.removeCallbacks(_longPressRunnable);
+			_showContextButtons = false;
 			return super.onTouchEvent(event, mapView);
 		}
 
@@ -351,6 +381,27 @@ public class RouteOverlay extends Overlay {
 			_isMoving = false;
 			_initialX = x;
 			_initialY = y;
+			
+			if (_showContextButtons) {
+				// Chequear si se pulsó en el botón de guiado
+				if (Math.hypot(x - _guidanceButtonPos.x, y - _guidanceButtonPos.y) <= _contextButtonSize / 2f) {
+					createGuidancePoint(_contextMenuGeoPosition);
+					_showContextButtons = false;
+					mapView.invalidate();
+					return true;
+				}
+				// Chequear si se pulsó en el botón de geometría
+				if (Math.hypot(x - _geometryButtonPos.x, y - _geometryButtonPos.y) <= _contextButtonSize / 2f) {
+					extendRoute(_contextMenuGeoPosition);
+					_showContextButtons = false;
+					mapView.invalidate();
+					return true;
+				}
+				// Si se pulsa fuera, cerrar menú
+				_showContextButtons = false;
+				mapView.invalidate();
+				return true;
+			}
 
 			// Comprobar si se pulsa en el icono de borrar (Guidance Point)
 			if (_longPressedGuidancePointIndex != -1) {
@@ -578,8 +629,21 @@ public class RouteOverlay extends Overlay {
 			return true;
 		}
 		
+		if (_showContextButtons) {
+			_showContextButtons = false;
+			mapView.invalidate();
+			return true;
+		}
+		
 		IGeoPoint p = mapView.getProjection().fromPixels((int) e.getX(), (int) e.getY());
 		
+		_contextMenuGeoPosition = p;
+		_showContextButtons = true;
+		mapView.invalidate();
+		return true;
+	}
+	
+	private void createGuidancePoint(IGeoPoint p) {
 		GuidancePoint newGp = new GuidancePoint(UUID.randomUUID().toString(), p.getLatitude(), p.getLongitude(), "", 50);
 		
 		GuidancePoint[] currentPoints = _route.getGuidancePoints();
@@ -591,9 +655,114 @@ public class RouteOverlay extends Overlay {
 		}
 		pointsList.add(newGp);
 		_route.setGuidancePoints(pointsList.toArray(new GuidancePoint[0]));
+	}
+	
+	private void extendRoute(IGeoPoint p) {
+		List<IGeoPoint> wayPoints = new ArrayList<>(_route.getWayPoints());
 		
-		mapView.invalidate();
-		return true;
+		if (wayPoints.isEmpty()) {
+			wayPoints.add(p);
+		} else {
+			IGeoPoint first = wayPoints.get(0);
+			IGeoPoint last = wayPoints.get(wayPoints.size() - 1);
+			
+			double distToFirst = new GeoPoint(p.getLatitude(), p.getLongitude())
+					.distanceToAsDouble(new GeoPoint(first.getLatitude(), first.getLongitude()));
+			double distToLast = new GeoPoint(p.getLatitude(), p.getLongitude())
+					.distanceToAsDouble(new GeoPoint(last.getLatitude(), last.getLongitude()));
+			
+			if (distToFirst < distToLast) {
+				wayPoints.add(0, p);
+			} else {
+				wayPoints.add(p);
+			}
+		}
+		
+		_route.setWayPoints(wayPoints.toArray(new IGeoPoint[0]));
+	}
+	
+	private void drawContextButtons(Canvas canvas, MapView mapView) {
+		if (_contextMenuGeoPosition == null) return;
+		
+		mapView.getProjection().toPixels(_contextMenuGeoPosition, _contextMenuScreenPos);
+		
+		int y = _contextMenuScreenPos.y - _contextButtonSize; // Arriba del punto
+		int xCenter = _contextMenuScreenPos.x;
+		
+		// Calcular posiciones
+		int xGuidance = xCenter - _contextButtonSize / 2 - _contextButtonSpacing / 2;
+		int xGeometry = xCenter + _contextButtonSize / 2 + _contextButtonSpacing / 2;
+		
+		// Ajustar si se salen de la pantalla
+		if (xGuidance - _contextButtonSize / 2 < 0) {
+			int diff = -(xGuidance - _contextButtonSize / 2) + 20;
+			xGuidance += diff;
+			xGeometry += diff;
+		} else if (mapView.getWidth() > 0 && xGeometry + _contextButtonSize / 2 > mapView.getWidth()) {
+			int diff = (xGeometry + _contextButtonSize / 2) - mapView.getWidth() + 20;
+			xGuidance -= diff;
+			xGeometry -= diff;
+		}
+		
+		if (y - _contextButtonSize / 2 < 0) {
+			y = _contextMenuScreenPos.y + _contextButtonSize + 20;
+		} else if (mapView.getHeight() > 0 && y + _contextButtonSize / 2 > mapView.getHeight()) {
+			// Logic for bottom overflow if needed, though usually above point is fine unless point is at top.
+			// Currently not fully implemented for bottom overflow, but preventing regression.
+		}
+		
+		_guidanceButtonPos.set(xGuidance, y);
+		_geometryButtonPos.set(xGeometry, y);
+		
+		// Dibujar botones
+		canvas.drawCircle(xGuidance, y, _contextButtonSize / 2f, _contextButtonPaint);
+		canvas.drawCircle(xGeometry, y, _contextButtonSize / 2f, _contextButtonPaint);
+		
+		// Dibujar iconos
+		drawGuidanceIcon(canvas, xGuidance, y);
+		drawGeometryIcon(canvas, xGeometry, y);
+	}
+	
+	private void drawGuidanceIcon(Canvas canvas, int x, int y) {
+		Path path = new Path();
+		float size = _contextButtonSize * 0.5f;
+		float halfSize = size / 2f;
+		
+		RectF bubble = new RectF(x - halfSize, y - halfSize - 5, x + halfSize, y + halfSize - 10);
+		path.addOval(bubble, Path.Direction.CW);
+		
+		path.moveTo(x - 5, y + halfSize - 10);
+		path.lineTo(x - 10, y + halfSize + 5);
+		path.lineTo(x + 5, y + halfSize - 8);
+		
+		canvas.drawPath(path, _contextIconPaint);
+		
+		// Puntos suspensivos simulados
+		float dotY = y - 5;
+		canvas.drawPoint(x - 10, dotY, _contextIconPaint);
+		canvas.drawPoint(x, dotY, _contextIconPaint);
+		canvas.drawPoint(x + 10, dotY, _contextIconPaint);
+	}
+	
+	private void drawGeometryIcon(Canvas canvas, int x, int y) {
+		Path path = new Path();
+		float size = _contextButtonSize * 0.5f;
+		float halfSize = size / 2f;
+		
+		path.moveTo(x - halfSize, y + halfSize);
+		path.lineTo(x - halfSize / 3, y - halfSize);
+		path.lineTo(x + halfSize / 3, y + halfSize);
+		path.lineTo(x + halfSize, y - halfSize / 4);
+		
+		canvas.drawPath(path, _contextIconPaint);
+		
+		// Puntos en los vértices
+		Paint dotPaint = new Paint(_contextIconPaint);
+		dotPaint.setStyle(Paint.Style.FILL);
+		canvas.drawCircle(x - halfSize, y + halfSize, 4, dotPaint);
+		canvas.drawCircle(x - halfSize / 3, y - halfSize, 4, dotPaint);
+		canvas.drawCircle(x + halfSize / 3, y + halfSize, 4, dotPaint);
+		canvas.drawCircle(x + halfSize, y - halfSize / 4, 4, dotPaint);
 	}
 	
 	private void deleteGuidancePoint(final int index) {
