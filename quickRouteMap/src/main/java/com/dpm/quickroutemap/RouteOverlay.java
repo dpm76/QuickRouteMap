@@ -57,17 +57,26 @@ public class RouteOverlay extends Overlay {
 	private int _longPressedPointIndex = -1;
 	private int _draggedGuidancePointIndex = -1;
 	private int _longPressedGuidancePointIndex = -1;
+	private int _pressedButton = -1;
+	private boolean _gestureCaptured = false;
+	private static final int PRESS_NONE = -1;
+	private static final int PRESS_DELETE_WAYPOINT = 0;
+	private static final int PRESS_DELETE_GUIDANCE = 1;
+	private static final int PRESS_EDIT_GUIDANCE = 2;
+	private static final int PRESS_CONTEXT_GUIDANCE = 3;
+	private static final int PRESS_CONTEXT_GEOMETRY = 4;
 	private int _resizingGuidancePointIndex = -1;
 	private float _initialRadius;
 	private float _initialTouchDist;
 	private boolean _justDismissedDeleteIcon = false;
-	
+
 	private final float _pointRadius = 20f;
-	
+
 	private final Handler _handler = new Handler(Looper.getMainLooper());
 	private boolean _isMoving = false;
 	private float _initialX, _initialY;
 	private final int _longPressTimeout = 500;
+	private final int _motionThreshold = 25;
 	private Bitmap _deleteBitmap;
 	private Bitmap _editBitmap;
 	private Bitmap _warningBitmap;
@@ -126,7 +135,6 @@ public class RouteOverlay extends Overlay {
 
 		_iconPaint.setColorFilter(new PorterDuffColorFilter(Color.RED, PorterDuff.Mode.SRC_IN));
 
-
 		_guidancePointPaint.setColor(Color.BLUE);
 		_guidancePointPaint.setAlpha(200);
 		_guidancePointPaint.setStyle(Paint.Style.FILL);
@@ -177,17 +185,17 @@ public class RouteOverlay extends Overlay {
 	public boolean isEditMode() {
 		return _isEditMode;
 	}
-	
+
 	@Override
 	public void draw(Canvas canvas, MapView mapView, boolean isShadow) {
 		this._mapView = mapView;
-		if(!isShadow && (_route != null) && (_route.getWayPoints().size()>1)){
-			
+		if (!isShadow && (_route != null) && (_route.getWayPoints().size() > 1)) {
+
 			List<IGeoPoint> wayPoints = _route.getWayPoints();
-			
-			Point screenPoint = new Point();			
+
+			Point screenPoint = new Point();
 			Path path = new Path();
-			
+
 			mapView.getProjection().toPixels(wayPoints.get(0), screenPoint);
 			path.moveTo(screenPoint.x, screenPoint.y);
 
@@ -197,8 +205,8 @@ public class RouteOverlay extends Overlay {
 					drawDeleteIcon(canvas, screenPoint);
 				}
 			}
-			
-			for(int i = 1; i < wayPoints.size(); i++){
+
+			for (int i = 1; i < wayPoints.size(); i++) {
 				mapView.getProjection().toPixels(wayPoints.get(i), screenPoint);
 				path.lineTo(screenPoint.x, screenPoint.y);
 				if (_isEditMode) {
@@ -208,26 +216,27 @@ public class RouteOverlay extends Overlay {
 					}
 				}
 			}
-			if(_route.isClosed()){
+			if (_route.isClosed()) {
 				mapView.getProjection().toPixels(wayPoints.get(0), screenPoint);
 				path.lineTo(screenPoint.x, screenPoint.y);
 			}
-			
-			
+
 			canvas.drawPath(path, _paint);
 
 			if (_isEditMode && _route.getGuidancePoints() != null) {
 				GuidancePoint[] guidancePoints = _route.getGuidancePoints();
 				for (int i = 0; i < guidancePoints.length; i++) {
 					GuidancePoint gp = guidancePoints[i];
-					if (gp.getPoint() == null) continue;
+					if (gp.getPoint() == null)
+						continue;
 
 					mapView.getProjection().toPixels(gp.getPoint(), screenPoint);
 
 					// Draw radius
 					float radiusInMeters = gp.getRadius();
-					float radiusInPixels = (float) (mapView.getProjection().metersToEquatorPixels(radiusInMeters) * (1 / Math.cos(Math.toRadians(gp.getLatitude()))));
-					
+					float radiusInPixels = (float) (mapView.getProjection().metersToEquatorPixels(radiusInMeters)
+							* (1 / Math.cos(Math.toRadians(gp.getLatitude()))));
+
 					boolean isEmpty = (gp.getNarrative() == null || gp.getNarrative().trim().isEmpty());
 					Paint pointPaint = isEmpty ? _warningPointPaint : _guidancePointPaint;
 					Paint radiusPaint = isEmpty ? _warningRadiusPaint : _guidanceRadiusPaint;
@@ -236,7 +245,7 @@ public class RouteOverlay extends Overlay {
 
 					// Draw point
 					canvas.drawCircle(screenPoint.x, screenPoint.y, _pointRadius, pointPaint);
-					
+
 					if (isEmpty) {
 						drawWarningIcon(canvas, screenPoint);
 					}
@@ -259,7 +268,7 @@ public class RouteOverlay extends Overlay {
 			_deleteBitmap = Bitmap.createScaledBitmap(_deleteBitmap, _deleteIconSize, _deleteIconSize, true);
 		}
 		if (_deleteBitmap != null) {
-			int offset = (int)_pointRadius + 20;
+			int offset = (int) _pointRadius + 20;
 			int x = pointPos.x + offset;
 			int y = pointPos.y - offset - _deleteIconSize;
 
@@ -294,9 +303,9 @@ public class RouteOverlay extends Overlay {
 			_editBitmap = BitmapFactory.decodeResource(_mapView.getResources(), android.R.drawable.ic_menu_edit);
 			_editBitmap = Bitmap.createScaledBitmap(_editBitmap, _editIconSize, _editIconSize, true);
 		}
-		
+
 		if (_deleteBitmap != null && _editBitmap != null) {
-			int offset = (int)_pointRadius + 20;
+			int offset = (int) _pointRadius + 20;
 			int xDelete = pointPos.x + offset;
 			int yDelete = pointPos.y - offset - _deleteIconSize;
 
@@ -318,7 +327,7 @@ public class RouteOverlay extends Overlay {
 
 			int xEdit = xDelete + _deleteIconSize + 20;
 			int yEdit = yDelete;
-			
+
 			_editIconScreenPos.set(xEdit, yEdit);
 			drawIconButton(canvas, _editBitmap, xEdit, yEdit, _editIconPaint);
 		}
@@ -340,7 +349,8 @@ public class RouteOverlay extends Overlay {
 		if (_warningBitmap == null && _mapView != null) {
 			_warningBitmap = BitmapFactory.decodeResource(_mapView.getResources(), android.R.drawable.stat_sys_warning);
 			if (_warningBitmap == null) {
-				_warningBitmap = BitmapFactory.decodeResource(_mapView.getResources(), android.R.drawable.ic_dialog_alert);
+				_warningBitmap = BitmapFactory.decodeResource(_mapView.getResources(),
+						android.R.drawable.ic_dialog_alert);
 			}
 			if (_warningBitmap != null) {
 				_warningBitmap = Bitmap.createScaledBitmap(_warningBitmap, _warningIconSize, _warningIconSize, true);
@@ -351,6 +361,24 @@ public class RouteOverlay extends Overlay {
 			int y = pointPos.y - _warningIconSize / 2;
 			canvas.drawBitmap(_warningBitmap, x, y, null);
 		}
+	}
+
+	private boolean isInsideDeleteIcon(float x, float y) {
+		return x >= _deleteIconScreenPos.x - 40 && x <= _deleteIconScreenPos.x + _deleteIconSize + 40 &&
+				y >= _deleteIconScreenPos.y - 40 && y <= _deleteIconScreenPos.y + _deleteIconSize + 40;
+	}
+
+	private boolean isInsideEditIcon(float x, float y) {
+		return x >= _editIconScreenPos.x - 40 && x <= _editIconScreenPos.x + _editIconSize + 40 &&
+				y >= _editIconScreenPos.y - 40 && y <= _editIconScreenPos.y + _editIconSize + 40;
+	}
+
+	private boolean isInsideContextGuidance(float x, float y) {
+		return Math.hypot(x - _guidanceButtonPos.x, y - _guidanceButtonPos.y) <= _contextButtonSize / 2f + 40;
+	}
+
+	private boolean isInsideContextGeometry(float x, float y) {
+		return Math.hypot(x - _geometryButtonPos.x, y - _geometryButtonPos.y) <= _contextButtonSize / 2f + 40;
 	}
 
 	@Override
@@ -366,6 +394,7 @@ public class RouteOverlay extends Overlay {
 			_draggedGuidancePointIndex = -1;
 			_draggedGuidancePointIndex = -1;
 			_resizingGuidancePointIndex = -1;
+			_pressedButton = PRESS_NONE;
 			_handler.removeCallbacks(_longPressRunnable);
 			_showContextButtons = false;
 			return super.onTouchEvent(event, mapView);
@@ -379,75 +408,78 @@ public class RouteOverlay extends Overlay {
 
 		if (action == MotionEvent.ACTION_DOWN) {
 			_isMoving = false;
+			_gestureCaptured = false;
 			_initialX = x;
 			_initialY = y;
-			
+
 			if (_showContextButtons) {
-				// Chequear si se pulsó en el botón de guiado
-				if (Math.hypot(x - _guidanceButtonPos.x, y - _guidanceButtonPos.y) <= _contextButtonSize / 2f) {
-					createGuidancePoint(_contextMenuGeoPosition);
-					_showContextButtons = false;
-					mapView.invalidate();
+				if (isInsideContextGuidance(x, y)) {
+					_pressedButton = PRESS_CONTEXT_GUIDANCE;
+					_gestureCaptured = true;
 					return true;
 				}
-				// Chequear si se pulsó en el botón de geometría
-				if (Math.hypot(x - _geometryButtonPos.x, y - _geometryButtonPos.y) <= _contextButtonSize / 2f) {
-					extendRoute(_contextMenuGeoPosition);
-					_showContextButtons = false;
-					mapView.invalidate();
+				if (isInsideContextGeometry(x, y)) {
+					_pressedButton = PRESS_CONTEXT_GEOMETRY;
+					_gestureCaptured = true;
 					return true;
 				}
-				// Si se pulsa fuera, cerrar menú
+				// Si se pulsa fuera, cerrar menú y consumir el evento para que el mapa no se
+				// mueva
 				_showContextButtons = false;
 				mapView.invalidate();
+				_justDismissedDeleteIcon = true;
+				_gestureCaptured = true;
 				return true;
 			}
 
-			// Comprobar si se pulsa en el icono de borrar (Guidance Point)
 			if (_longPressedGuidancePointIndex != -1) {
-				if (x >= _deleteIconScreenPos.x - 10 && x <= _deleteIconScreenPos.x + _deleteIconSize + 10 &&
-					y >= _deleteIconScreenPos.y - 10 && y <= _deleteIconScreenPos.y + _deleteIconSize + 10) {
-					deleteGuidancePoint(_longPressedGuidancePointIndex);
-					_longPressedGuidancePointIndex = -1;
-					mapView.invalidate();
+				if (isInsideDeleteIcon(x, y)) {
+					_pressedButton = PRESS_DELETE_GUIDANCE;
+					_gestureCaptured = true;
 					return true;
 				}
-				
-				if (x >= _editIconScreenPos.x - 10 && x <= _editIconScreenPos.x + _editIconSize + 10 &&
-					y >= _editIconScreenPos.y - 10 && y <= _editIconScreenPos.y + _editIconSize + 10) {
-					editGuidancePoint(_longPressedGuidancePointIndex);
-					_longPressedGuidancePointIndex = -1;
-					mapView.invalidate();
+				if (isInsideEditIcon(x, y)) {
+					_pressedButton = PRESS_EDIT_GUIDANCE;
+					_gestureCaptured = true;
 					return true;
 				}
+				// Si se pulsa fuera, descartar iconos y consumir evento
+				_longPressedGuidancePointIndex = -1;
+				mapView.invalidate();
+				_justDismissedDeleteIcon = true;
+				_gestureCaptured = true;
+				return true;
 			}
 
-			// Comprobar si se pulsa en el icono de borrar
 			if (_longPressedPointIndex != -1) {
-				if (x >= _deleteIconScreenPos.x - 10 && x <= _deleteIconScreenPos.x + _deleteIconSize + 10 &&
-					y >= _deleteIconScreenPos.y - 10 && y <= _deleteIconScreenPos.y + _deleteIconSize + 10) {
-					deleteWayPoint(_longPressedPointIndex);
-					_longPressedPointIndex = -1;
-					mapView.invalidate();
+				if (isInsideDeleteIcon(x, y)) {
+					_pressedButton = PRESS_DELETE_WAYPOINT;
+					_gestureCaptured = true;
 					return true;
 				}
+				// Si se pulsa fuera, descartar icono y consumir evento
+				_longPressedPointIndex = -1;
+				mapView.invalidate();
+				_justDismissedDeleteIcon = true;
+				_gestureCaptured = true;
+				return true;
 			}
 
-			_justDismissedDeleteIcon = (_longPressedPointIndex != -1 || _longPressedGuidancePointIndex != -1);
-
-			_longPressedPointIndex = -1; // Resetear si se pulsa en otro sitio
-			_longPressedGuidancePointIndex = -1;
+			_pressedButton = PRESS_NONE;
+			_justDismissedDeleteIcon = false;
 
 			// Comprobar si se pulsa sobre un punto de guiado
 			if (_route.getGuidancePoints() != null) {
 				GuidancePoint[] guidancePoints = _route.getGuidancePoints();
 				Point screenPoint = new Point();
 				for (int i = 0; i < guidancePoints.length; i++) {
-					if (guidancePoints[i].getPoint() == null) continue;
+					if (guidancePoints[i].getPoint() == null)
+						continue;
 					projection.toPixels(guidancePoints[i].getPoint(), screenPoint);
 					if (Math.hypot(screenPoint.x - x, screenPoint.y - y) < _pointRadius * 2) {
 						_draggedGuidancePointIndex = i;
 						_handler.postDelayed(_longPressRunnable, _longPressTimeout);
+						_gestureCaptured = true;
 						return true;
 					}
 				}
@@ -460,6 +492,7 @@ public class RouteOverlay extends Overlay {
 				if (Math.hypot(screenPoint.x - x, screenPoint.y - y) < _pointRadius * 2) {
 					_draggedPointIndex = i;
 					_handler.postDelayed(_longPressRunnable, _longPressTimeout);
+					_gestureCaptured = true;
 					return true;
 				}
 			}
@@ -468,17 +501,21 @@ public class RouteOverlay extends Overlay {
 			if (_route.getGuidancePoints() != null) {
 				GuidancePoint[] guidancePoints = _route.getGuidancePoints();
 				for (int i = 0; i < guidancePoints.length; i++) {
-					if (guidancePoints[i].getPoint() == null) continue;
+					if (guidancePoints[i].getPoint() == null)
+						continue;
 					mapView.getProjection().toPixels(guidancePoints[i].getPoint(), screenPoint);
-					
+
 					float radiusInMeters = guidancePoints[i].getRadius();
-					float radiusInPixels = (float) (mapView.getProjection().metersToEquatorPixels(radiusInMeters) * (1 / Math.cos(Math.toRadians(guidancePoints[i].getLatitude()))));
-					
+					float radiusInPixels = (float) (mapView.getProjection().metersToEquatorPixels(radiusInMeters)
+							* (1 / Math.cos(Math.toRadians(guidancePoints[i].getLatitude()))));
+
 					if (Math.hypot(screenPoint.x - x, screenPoint.y - y) <= radiusInPixels) {
 						_resizingGuidancePointIndex = i;
 						_initialRadius = radiusInMeters;
-						IGeoPoint touchGeo = projection.fromPixels((int)x, (int)y);
-						_initialTouchDist = (float) new GeoPoint(guidancePoints[i].getLatitude(), guidancePoints[i].getLongitude()).distanceToAsDouble(touchGeo);
+						IGeoPoint touchGeo = projection.fromPixels((int) x, (int) y);
+						_initialTouchDist = (float) new GeoPoint(guidancePoints[i].getLatitude(),
+								guidancePoints[i].getLongitude()).distanceToAsDouble(touchGeo);
+						_gestureCaptured = true;
 						return true;
 					}
 				}
@@ -520,61 +557,103 @@ public class RouteOverlay extends Overlay {
 				_draggedPointIndex = bestSegmentIndex + 1;
 				_handler.postDelayed(_longPressRunnable, _longPressTimeout);
 				mapView.invalidate();
+				_gestureCaptured = true;
 				return true;
 			}
 		} else if (action == MotionEvent.ACTION_MOVE) {
-			if (Math.hypot(x - _initialX, y - _initialY) > 10) {
-				_isMoving = true;
-				_handler.removeCallbacks(_longPressRunnable);
-			}
+			if (_gestureCaptured) {
+				if (!_isMoving && Math.hypot(x - _initialX, y - _initialY) > _motionThreshold) {
+					_isMoving = true;
+					_handler.removeCallbacks(_longPressRunnable);
+				}
 
-			if (_draggedPointIndex != -1) {
-				IGeoPoint newGeoPoint = projection.fromPixels((int)x, (int)y);
-				List<IGeoPoint> wayPoints = _route.getWayPoints();
-				IGeoPoint[] pointsArray = new IGeoPoint[wayPoints.size()];
-				wayPoints.toArray(pointsArray);
-				pointsArray[_draggedPointIndex] = newGeoPoint;
-				_route.setWayPoints(pointsArray);
-				mapView.invalidate();
+				if (_isMoving) {
+					if (_draggedPointIndex != -1) {
+						IGeoPoint newGeoPoint = projection.fromPixels((int) x, (int) y);
+						List<IGeoPoint> wayPoints = _route.getWayPoints();
+						IGeoPoint[] pointsArray = new IGeoPoint[wayPoints.size()];
+						wayPoints.toArray(pointsArray);
+						pointsArray[_draggedPointIndex] = newGeoPoint;
+						_route.setWayPoints(pointsArray);
+						mapView.invalidate();
+					} else if (_draggedGuidancePointIndex != -1) {
+						IGeoPoint newGeoPoint = projection.fromPixels((int) x, (int) y);
+						GuidancePoint[] guidancePoints = _route.getGuidancePoints();
+						if (guidancePoints != null && _draggedGuidancePointIndex >= 0
+								&& _draggedGuidancePointIndex < guidancePoints.length) {
+							GuidancePoint oldGp = guidancePoints[_draggedGuidancePointIndex];
+							guidancePoints[_draggedGuidancePointIndex] = new GuidancePoint(oldGp.getKey(),
+									newGeoPoint.getLatitude(), newGeoPoint.getLongitude(), oldGp.getNarrative(),
+									(int) oldGp.getRadius());
+							_route.setGuidancePoints(guidancePoints);
+							mapView.invalidate();
+						}
+					} else if (_resizingGuidancePointIndex != -1) {
+						GuidancePoint[] guidancePoints = _route.getGuidancePoints();
+						if (guidancePoints != null && _resizingGuidancePointIndex >= 0
+								&& _resizingGuidancePointIndex < guidancePoints.length) {
+							GuidancePoint gp = guidancePoints[_resizingGuidancePointIndex];
+							IGeoPoint touchGeo = projection.fromPixels((int) x, (int) y);
+							double currentDist = new GeoPoint(gp.getLatitude(), gp.getLongitude())
+									.distanceToAsDouble(touchGeo);
+
+							float newRadius = _initialRadius + (float) (currentDist - _initialTouchDist);
+							if (newRadius < 10)
+								newRadius = 10;
+
+							guidancePoints[_resizingGuidancePointIndex] = new GuidancePoint(gp.getKey(),
+									gp.getLatitude(), gp.getLongitude(), gp.getNarrative(), (int) newRadius);
+							_route.setGuidancePoints(guidancePoints);
+							mapView.invalidate();
+						}
+					}
+				}
 				return true;
-			}
-
-			if (_draggedGuidancePointIndex != -1) {
-				IGeoPoint newGeoPoint = projection.fromPixels((int)x, (int)y);
-				GuidancePoint[] guidancePoints = _route.getGuidancePoints();
-				if (guidancePoints != null && _draggedGuidancePointIndex >= 0 && _draggedGuidancePointIndex < guidancePoints.length) {
-					GuidancePoint oldGp = guidancePoints[_draggedGuidancePointIndex];
-					guidancePoints[_draggedGuidancePointIndex] = new GuidancePoint(oldGp.getKey(), newGeoPoint.getLatitude(), newGeoPoint.getLongitude(), oldGp.getNarrative(), (int)oldGp.getRadius());
-					_route.setGuidancePoints(guidancePoints);
-					mapView.invalidate();
-					return true;
-				}
-			}
-
-			if (_resizingGuidancePointIndex != -1) {
-				GuidancePoint[] guidancePoints = _route.getGuidancePoints();
-				if (guidancePoints != null && _resizingGuidancePointIndex >= 0 && _resizingGuidancePointIndex < guidancePoints.length) {
-					GuidancePoint gp = guidancePoints[_resizingGuidancePointIndex];
-					IGeoPoint touchGeo = projection.fromPixels((int)x, (int)y);
-					double currentDist = new GeoPoint(gp.getLatitude(), gp.getLongitude()).distanceToAsDouble(touchGeo);
-					
-					float newRadius = _initialRadius + (float)(currentDist - _initialTouchDist);
-					if (newRadius < 10) newRadius = 10;
-					
-					guidancePoints[_resizingGuidancePointIndex] = new GuidancePoint(gp.getKey(), gp.getLatitude(), gp.getLongitude(), gp.getNarrative(), (int)newRadius);
-					_route.setGuidancePoints(guidancePoints);
-					mapView.invalidate();
-					return true;
-				}
 			}
 		} else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
 			_handler.removeCallbacks(_longPressRunnable);
-			boolean wasEditing = _draggedPointIndex != -1 || _draggedGuidancePointIndex != -1 || _resizingGuidancePointIndex != -1;
-			
+
+			if (_pressedButton != PRESS_NONE && action == MotionEvent.ACTION_UP) {
+				int btn = _pressedButton;
+				_pressedButton = PRESS_NONE;
+				_gestureCaptured = false;
+
+				if (btn == PRESS_CONTEXT_GUIDANCE && isInsideContextGuidance(x, y)) {
+					createGuidancePoint(_contextMenuGeoPosition);
+					_showContextButtons = false;
+					mapView.invalidate();
+				} else if (btn == PRESS_CONTEXT_GEOMETRY && isInsideContextGeometry(x, y)) {
+					extendRoute(_contextMenuGeoPosition);
+					_showContextButtons = false;
+					mapView.invalidate();
+				} else if (btn == PRESS_DELETE_GUIDANCE && isInsideDeleteIcon(x, y)) {
+					deleteGuidancePoint(_longPressedGuidancePointIndex);
+					_longPressedGuidancePointIndex = -1;
+					mapView.invalidate();
+				} else if (btn == PRESS_EDIT_GUIDANCE && isInsideEditIcon(x, y)) {
+					editGuidancePoint(_longPressedGuidancePointIndex);
+					_longPressedGuidancePointIndex = -1;
+					mapView.invalidate();
+				} else if (btn == PRESS_DELETE_WAYPOINT && isInsideDeleteIcon(x, y)) {
+					deleteWayPoint(_longPressedPointIndex);
+					_longPressedPointIndex = -1;
+					mapView.invalidate();
+				}
+				_justDismissedDeleteIcon = false;
+				return true;
+			}
+
+			boolean consumed = _gestureCaptured;
+			_pressedButton = PRESS_NONE;
+			_gestureCaptured = false;
+
+			boolean wasEditing = _draggedPointIndex != -1 || _draggedGuidancePointIndex != -1
+					|| _resizingGuidancePointIndex != -1;
+
 			_draggedPointIndex = -1;
 			_draggedGuidancePointIndex = -1;
 			_resizingGuidancePointIndex = -1;
-			return wasEditing;
+			return consumed || wasEditing;
 		}
 
 		return super.onTouchEvent(event, mapView);
@@ -617,7 +696,7 @@ public class RouteOverlay extends Overlay {
 
 		return (float) Math.hypot(px - outProjected.x, py - outProjected.y);
 	}
-	
+
 	@Override
 	public boolean onSingleTapConfirmed(MotionEvent e, MapView mapView) {
 		if (!_isEditMode) {
@@ -628,24 +707,25 @@ public class RouteOverlay extends Overlay {
 			_justDismissedDeleteIcon = false;
 			return true;
 		}
-		
+
 		if (_showContextButtons) {
 			_showContextButtons = false;
 			mapView.invalidate();
 			return true;
 		}
-		
+
 		IGeoPoint p = mapView.getProjection().fromPixels((int) e.getX(), (int) e.getY());
-		
+
 		_contextMenuGeoPosition = p;
 		_showContextButtons = true;
 		mapView.invalidate();
 		return true;
 	}
-	
+
 	private void createGuidancePoint(IGeoPoint p) {
-		GuidancePoint newGp = new GuidancePoint(UUID.randomUUID().toString(), p.getLatitude(), p.getLongitude(), "", 50);
-		
+		GuidancePoint newGp = new GuidancePoint(UUID.randomUUID().toString(), p.getLatitude(), p.getLongitude(), "",
+				50);
+
 		GuidancePoint[] currentPoints = _route.getGuidancePoints();
 		List<GuidancePoint> pointsList;
 		if (currentPoints == null) {
@@ -656,43 +736,44 @@ public class RouteOverlay extends Overlay {
 		pointsList.add(newGp);
 		_route.setGuidancePoints(pointsList.toArray(new GuidancePoint[0]));
 	}
-	
+
 	private void extendRoute(IGeoPoint p) {
 		List<IGeoPoint> wayPoints = new ArrayList<>(_route.getWayPoints());
-		
+
 		if (wayPoints.isEmpty()) {
 			wayPoints.add(p);
 		} else {
 			IGeoPoint first = wayPoints.get(0);
 			IGeoPoint last = wayPoints.get(wayPoints.size() - 1);
-			
+
 			double distToFirst = new GeoPoint(p.getLatitude(), p.getLongitude())
 					.distanceToAsDouble(new GeoPoint(first.getLatitude(), first.getLongitude()));
 			double distToLast = new GeoPoint(p.getLatitude(), p.getLongitude())
 					.distanceToAsDouble(new GeoPoint(last.getLatitude(), last.getLongitude()));
-			
+
 			if (distToFirst < distToLast) {
 				wayPoints.add(0, p);
 			} else {
 				wayPoints.add(p);
 			}
 		}
-		
+
 		_route.setWayPoints(wayPoints.toArray(new IGeoPoint[0]));
 	}
-	
+
 	private void drawContextButtons(Canvas canvas, MapView mapView) {
-		if (_contextMenuGeoPosition == null) return;
-		
+		if (_contextMenuGeoPosition == null)
+			return;
+
 		mapView.getProjection().toPixels(_contextMenuGeoPosition, _contextMenuScreenPos);
-		
+
 		int y = _contextMenuScreenPos.y - _contextButtonSize; // Arriba del punto
 		int xCenter = _contextMenuScreenPos.x;
-		
+
 		// Calcular posiciones
 		int xGuidance = xCenter - _contextButtonSize / 2 - _contextButtonSpacing / 2;
 		int xGeometry = xCenter + _contextButtonSize / 2 + _contextButtonSpacing / 2;
-		
+
 		// Ajustar si se salen de la pantalla
 		if (xGuidance - _contextButtonSize / 2 < 0) {
 			int diff = -(xGuidance - _contextButtonSize / 2) + 20;
@@ -703,59 +784,61 @@ public class RouteOverlay extends Overlay {
 			xGuidance -= diff;
 			xGeometry -= diff;
 		}
-		
+
 		if (y - _contextButtonSize / 2 < 0) {
 			y = _contextMenuScreenPos.y + _contextButtonSize + 20;
 		} else if (mapView.getHeight() > 0 && y + _contextButtonSize / 2 > mapView.getHeight()) {
-			// Logic for bottom overflow if needed, though usually above point is fine unless point is at top.
-			// Currently not fully implemented for bottom overflow, but preventing regression.
+			// Logic for bottom overflow if needed, though usually above point is fine
+			// unless point is at top.
+			// Currently not fully implemented for bottom overflow, but preventing
+			// regression.
 		}
-		
+
 		_guidanceButtonPos.set(xGuidance, y);
 		_geometryButtonPos.set(xGeometry, y);
-		
+
 		// Dibujar botones
 		canvas.drawCircle(xGuidance, y, _contextButtonSize / 2f, _contextButtonPaint);
 		canvas.drawCircle(xGeometry, y, _contextButtonSize / 2f, _contextButtonPaint);
-		
+
 		// Dibujar iconos
 		drawGuidanceIcon(canvas, xGuidance, y);
 		drawGeometryIcon(canvas, xGeometry, y);
 	}
-	
+
 	private void drawGuidanceIcon(Canvas canvas, int x, int y) {
 		Path path = new Path();
 		float size = _contextButtonSize * 0.5f;
 		float halfSize = size / 2f;
-		
+
 		RectF bubble = new RectF(x - halfSize, y - halfSize - 5, x + halfSize, y + halfSize - 10);
 		path.addOval(bubble, Path.Direction.CW);
-		
+
 		path.moveTo(x - 5, y + halfSize - 10);
 		path.lineTo(x - 10, y + halfSize + 5);
 		path.lineTo(x + 5, y + halfSize - 8);
-		
+
 		canvas.drawPath(path, _contextIconPaint);
-		
+
 		// Puntos suspensivos simulados
 		float dotY = y - 5;
 		canvas.drawPoint(x - 10, dotY, _contextIconPaint);
 		canvas.drawPoint(x, dotY, _contextIconPaint);
 		canvas.drawPoint(x + 10, dotY, _contextIconPaint);
 	}
-	
+
 	private void drawGeometryIcon(Canvas canvas, int x, int y) {
 		Path path = new Path();
 		float size = _contextButtonSize * 0.5f;
 		float halfSize = size / 2f;
-		
+
 		path.moveTo(x - halfSize, y + halfSize);
 		path.lineTo(x - halfSize / 3, y - halfSize);
 		path.lineTo(x + halfSize / 3, y + halfSize);
 		path.lineTo(x + halfSize, y - halfSize / 4);
-		
+
 		canvas.drawPath(path, _contextIconPaint);
-		
+
 		// Puntos en los vértices
 		Paint dotPaint = new Paint(_contextIconPaint);
 		dotPaint.setStyle(Paint.Style.FILL);
@@ -764,7 +847,7 @@ public class RouteOverlay extends Overlay {
 		canvas.drawCircle(x + halfSize / 3, y + halfSize, 4, dotPaint);
 		canvas.drawCircle(x + halfSize, y - halfSize / 4, 4, dotPaint);
 	}
-	
+
 	private void deleteGuidancePoint(final int index) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(_mapView.getContext());
 		builder.setTitle("Confirmar borrado");
@@ -779,24 +862,26 @@ public class RouteOverlay extends Overlay {
 		builder.setNegativeButton("No", null);
 		builder.show();
 	}
-	
+
 	private void editGuidancePoint(final int index) {
-		if (_route.getGuidancePoints() == null || index < 0 || index >= _route.getGuidancePoints().length) return;
+		if (_route.getGuidancePoints() == null || index < 0 || index >= _route.getGuidancePoints().length)
+			return;
 		final GuidancePoint gp = _route.getGuidancePoints()[index];
-		
+
 		AlertDialog.Builder builder = new AlertDialog.Builder(_mapView.getContext());
 		builder.setTitle("Editar Punto de Guiado");
-		
+
 		final EditText input = new EditText(_mapView.getContext());
 		input.setText(gp.getNarrative());
 		builder.setView(input);
-		
+
 		builder.setPositiveButton("Guardar", new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				String newNarrative = input.getText().toString();
 				GuidancePoint[] guidancePoints = _route.getGuidancePoints();
-				guidancePoints[index] = new GuidancePoint(gp.getKey(), gp.getLatitude(), gp.getLongitude(), newNarrative, (int)gp.getRadius());
+				guidancePoints[index] = new GuidancePoint(gp.getKey(), gp.getLatitude(), gp.getLongitude(),
+						newNarrative, (int) gp.getRadius());
 				_route.setGuidancePoints(guidancePoints);
 				_mapView.invalidate();
 			}
@@ -806,7 +891,8 @@ public class RouteOverlay extends Overlay {
 	}
 
 	private void performDeleteGuidancePoint(int index) {
-		if (_route.getGuidancePoints() == null) return;
+		if (_route.getGuidancePoints() == null)
+			return;
 		List<GuidancePoint> guidancePoints = new ArrayList<>(Arrays.asList(_route.getGuidancePoints()));
 		if (index >= 0 && index < guidancePoints.size()) {
 			guidancePoints.remove(index);

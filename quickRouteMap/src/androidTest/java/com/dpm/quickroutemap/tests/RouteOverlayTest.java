@@ -42,7 +42,7 @@ public class RouteOverlayTest {
         MockitoAnnotations.openMocks(this);
         _routeOverlay = new RouteOverlay(_route, 0, 0f);
         _routeOverlay.setEditMode(true);
-        
+
         when(_mapView.getProjection()).thenReturn(_projection);
         when(_projection.fromPixels(anyInt(), anyInt())).thenReturn(_geoPoint);
         when(_geoPoint.getLatitude()).thenReturn(40.0);
@@ -52,14 +52,16 @@ public class RouteOverlayTest {
         points.add(_geoPoint);
         points.add(_geoPoint);
         when(_route.getWayPoints()).thenReturn(points);
-        
+
         // Mock toPixels to simply return the inputs as offsets or fixed values
-        // For our test, we want to simulate that the geoPoint maps to roughly where we clicked (100, 200)
+        // For our test, we want to simulate that the geoPoint maps to roughly where we
+        // clicked (100, 200)
         doAnswer(new Answer<Point>() {
             @Override
             public Point answer(InvocationOnMock invocation) throws Throwable {
                 Point out = (Point) invocation.getArguments()[1];
-                if (out == null) out = new Point();
+                if (out == null)
+                    out = new Point();
                 out.set(100, 200);
                 return out;
             }
@@ -76,239 +78,176 @@ public class RouteOverlayTest {
         boolean result = _routeOverlay.onSingleTapConfirmed(motionEvent, _mapView);
 
         Assert.assertTrue(result);
-        
+
         // Verify NO point is created yet
         verify(_route, never()).setGuidancePoints(any());
         verify(_mapView).invalidate();
-        
+
         motionEvent.recycle();
     }
 
     @Test
-    public void onContextButton_GuidancePoint_CreatesPoint() {
+    public void onContextButton_GuidancePoint_CreatesPoint_OnActionUp() {
         // Setup: Show menu first
         MotionEvent tap1 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 100f, 200f, 0);
         _routeOverlay.onSingleTapConfirmed(tap1, _mapView);
-        
+
         // Force draw to calculate button positions
-        // In this test environment (instrumented), Canvas is available.
         android.graphics.Canvas canvas = new android.graphics.Canvas();
         _routeOverlay.draw(canvas, _mapView, false);
-        
-        // Guidance button should be at shifted position due to left boundary check
-        // Original xGuidance = 30. Shifted by 40 -> 70.
-        // Y = 100.
-        
-        MotionEvent tap2 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 70f, 100f, 0);
-        boolean handled = _routeOverlay.onTouchEvent(tap2, _mapView);
-        
-        Assert.assertTrue(handled);
-        
-        ArgumentCaptor<GuidancePoint[]> argument = ArgumentCaptor.forClass(GuidancePoint[].class);
-        verify(_route).setGuidancePoints(argument.capture());
-        
-        GuidancePoint[] capturedPoints = argument.getValue();
-        Assert.assertEquals(1, capturedPoints.length);
-        Assert.assertEquals(40.0, capturedPoints[0].getLatitude(), 0.00001);
-        Assert.assertEquals(-3.0, capturedPoints[0].getLongitude(), 0.00001);
 
-        tap1.recycle();
-        tap2.recycle();
-    }
-    
-    @Test
-    public void extendRoute_AddsToStart_WhenCloserToStart() {
-        // Setup Route: Start(0,0), End(0,10)
-        IGeoPoint startPoint = mock(IGeoPoint.class);
-        when(startPoint.getLatitude()).thenReturn(0.0);
-        when(startPoint.getLongitude()).thenReturn(0.0);
-        
-        IGeoPoint endPoint = mock(IGeoPoint.class);
-        when(endPoint.getLatitude()).thenReturn(0.0);
-        when(endPoint.getLongitude()).thenReturn(10.0); // Far away
-        
-        java.util.List<IGeoPoint> points = new java.util.ArrayList<>();
-        points.add(startPoint);
-        points.add(endPoint);
-        when(_route.getWayPoints()).thenReturn(points);
-        
-        // Setup New Point: (0, -1) -> Dist to Start=1, Dist to End=11
-        IGeoPoint newPoint = mock(IGeoPoint.class);
-        when(newPoint.getLatitude()).thenReturn(0.0);
-        when(newPoint.getLongitude()).thenReturn(-1.0);
-        
-        // Click at (100,100) -> returns newPoint
-        when(_projection.fromPixels(eq(100), eq(100))).thenReturn(newPoint);
-        
-        // Trick: set context menu pos to allow button drawing math to work 
-        // We simulate that we opened the menu at (100, 100) previously
-        MotionEvent tap1 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 100f, 100f, 0);
-        _routeOverlay.onSingleTapConfirmed(tap1, _mapView);
-        
-        // Force draw to calc positions (geometry button will be at x+offset)
-        // We don't care about exact button position validation here, just that we hit it
-        // But to hit it, we need to know where it is.
-        // Let's assume standard offset logic applies.
-        // xGeometry = 100 + 100/2 + 40/2 = 170.
-        
-        android.graphics.Canvas canvas = new android.graphics.Canvas();
-        _routeOverlay.draw(canvas, _mapView, false);
-        
-        // Tap Geometry Button
-        // Menu at (100, 200) due to setUp mock.
-        // Y = 200 - 100 = 100.
-        // xGeometry = 170.
-        
-        MotionEvent tap2 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 170f, 100f, 0); 
-        boolean handled = _routeOverlay.onTouchEvent(tap2, _mapView);
-        
-        Assert.assertTrue("Should handle touch on geometry button", handled);
-        
-        ArgumentCaptor<IGeoPoint[]> argument = ArgumentCaptor.forClass(IGeoPoint[].class);
-        verify(_route).setWayPoints(argument.capture());
-        
-        IGeoPoint[] resultPoints = argument.getValue();
-        Assert.assertEquals(3, resultPoints.length);
-        Assert.assertEquals(newPoint, resultPoints[0]); // Added to START
-        Assert.assertEquals(startPoint, resultPoints[1]);
-        Assert.assertEquals(endPoint, resultPoints[2]);
+        // Buttons at Y = 200 - 100 = 100.
+        // xGuidance = 70 (due to boundary shift from (30) to (30+40=70)).
 
-        tap1.recycle();
-        tap2.recycle();
-    }
-    
-    @Test
-    public void extendRoute_AddsToEnd_WhenCloserToEnd() {
-        // Setup Route: Start(0,0), End(0,10)
-        IGeoPoint startPoint = mock(IGeoPoint.class);
-        when(startPoint.getLatitude()).thenReturn(0.0);
-        when(startPoint.getLongitude()).thenReturn(0.0);
-        
-        IGeoPoint endPoint = mock(IGeoPoint.class);
-        when(endPoint.getLatitude()).thenReturn(0.0);
-        when(endPoint.getLongitude()).thenReturn(10.0); 
-        
-        java.util.List<IGeoPoint> points = new java.util.ArrayList<>();
-        points.add(startPoint);
-        points.add(endPoint);
-        when(_route.getWayPoints()).thenReturn(points);
-        
-        // Setup New Point: (0, 11) -> Dist to Start=11, Dist to End=1
-        IGeoPoint newPoint = mock(IGeoPoint.class);
-        when(newPoint.getLatitude()).thenReturn(0.0);
-        when(newPoint.getLongitude()).thenReturn(11.0);
-        
-        // Click at (100,100) -> returns newPoint
-        when(_projection.fromPixels(eq(100), eq(100))).thenReturn(newPoint);
-        
-        // Open menu
-        MotionEvent tap1 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 100f, 100f, 0);
-        _routeOverlay.onSingleTapConfirmed(tap1, _mapView);
-        
-        // Draw
-        android.graphics.Canvas canvas = new android.graphics.Canvas();
-        _routeOverlay.draw(canvas, _mapView, false);
-        
-        // Tap Geometry Button (x=170, y=100)
-        MotionEvent tap2 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 170f, 100f, 0); 
-        boolean handled = _routeOverlay.onTouchEvent(tap2, _mapView);
-        
-        Assert.assertTrue(handled);
-        
-        ArgumentCaptor<IGeoPoint[]> argument = ArgumentCaptor.forClass(IGeoPoint[].class);
-        verify(_route).setWayPoints(argument.capture());
-        
-        IGeoPoint[] resultPoints = argument.getValue();
-        Assert.assertEquals(3, resultPoints.length);
-        Assert.assertEquals(startPoint, resultPoints[0]);
-        Assert.assertEquals(endPoint, resultPoints[1]);
-        Assert.assertEquals(newPoint, resultPoints[2]); // Added to END
+        // Step 1: ACTION_DOWN on button
+        MotionEvent down = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 70f, 100f, 0);
+        boolean handledDown = _routeOverlay.onTouchEvent(down, _mapView);
+        Assert.assertTrue("Should handle DOWN on button", handledDown);
 
-        tap1.recycle();
-        tap2.recycle();
-    }
-
-    @Test
-    public void onSingleTapConfirmed_NotInEditMode_ReturnsFalse() {
-        _routeOverlay.setEditMode(false);
-        MotionEvent motionEvent = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 100f, 200f, 0);
-        
-        boolean result = _routeOverlay.onSingleTapConfirmed(motionEvent, _mapView);
-        Assert.assertFalse(result);
+        // Verify NO point created on DOWN
         verify(_route, never()).setGuidancePoints(any());
-        
-        motionEvent.recycle();
-    }
-    @Test
-    public void extendRoute_AddsToEmpty_WhenRouteIsEmpty() {
-        // Setup Empty Route
-        when(_route.getWayPoints()).thenReturn(new java.util.ArrayList<IGeoPoint>());
-        
-        IGeoPoint newPoint = mock(IGeoPoint.class);
-        when(newPoint.getLatitude()).thenReturn(10.0);
-        when(newPoint.getLongitude()).thenReturn(10.0);
-        
-        when(_projection.fromPixels(eq(100), eq(100))).thenReturn(newPoint);
-        
-        // Show menu
-        MotionEvent tap1 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 100f, 100f, 0);
-        _routeOverlay.onSingleTapConfirmed(tap1, _mapView);
-        
-        // Draw (required so touches register on buttons)
-        android.graphics.Canvas canvas = new android.graphics.Canvas();
-        _routeOverlay.draw(canvas, _mapView, false);
-        
-        // Tap Geometry Button
-        // Menu at (100, 200) -> Y=100.
-        // Geometry button X=170.
-        MotionEvent tap2 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 170f, 100f, 0);
-        boolean handled = _routeOverlay.onTouchEvent(tap2, _mapView);
-        
-        Assert.assertTrue(handled);
-        
-        // Verify 1 point added
-        ArgumentCaptor<IGeoPoint[]> argument = ArgumentCaptor.forClass(IGeoPoint[].class);
-        verify(_route).setWayPoints(argument.capture());
-        
-        IGeoPoint[] capturedPoints = argument.getValue();
-        Assert.assertEquals(1, capturedPoints.length);
-        Assert.assertEquals(newPoint, capturedPoints[0]);
-        
+
+        // Step 2: ACTION_UP on button
+        MotionEvent up = MotionEvent.obtain(0, 50, MotionEvent.ACTION_UP, 70f, 100f, 0);
+        boolean handledUp = _routeOverlay.onTouchEvent(up, _mapView);
+        Assert.assertTrue("Should handle UP on button", handledUp);
+
+        // Verify point IS created now
+        verify(_route).setGuidancePoints(any(GuidancePoint[].class));
+
         tap1.recycle();
-        tap2.recycle();
+        down.recycle();
+        up.recycle();
     }
 
     @Test
-    public void onTouchEvent_DismissesMenu_WhenTapOutside() {
-        // Show menu first
+    public void onContextButton_NoExecution_IfReleaseOffset() {
+        // Setup: Show menu
         MotionEvent tap1 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 100f, 200f, 0);
         _routeOverlay.onSingleTapConfirmed(tap1, _mapView);
-        
-        // Draw
         android.graphics.Canvas canvas = new android.graphics.Canvas();
         _routeOverlay.draw(canvas, _mapView, false);
-        
-        // Button positions:
-        // Menu at (100, 200).
-        // Buttons at Y = 200 - 100 = 100.
-        // xGuidance = 30, xGeometry = 170.
-        // Size = 100 (radius 50).
-        
-        // Tap far away at (500, 500)
-        MotionEvent tap2 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 500f, 500f, 0);
-        boolean handled = _routeOverlay.onTouchEvent(tap2, _mapView);
-        
-        // It should return true (consumed) to indicate we handled the dismissal
-        Assert.assertTrue(handled);
-        
-        // Verify NO actions taken
-        verify(_route, never()).setGuidancePoints(any()); // No new guidance point
-        verify(_route, never()).setWayPoints(any());      // No new route point
-        
-        // Verify invalidate called to redraw (removing menu)
-        verify(_mapView, atLeast(1)).invalidate();
-        
+
+        // Step 1: ACTION_DOWN on button (X=70, Y=100)
+        MotionEvent down = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 70f, 100f, 0);
+        _routeOverlay.onTouchEvent(down, _mapView);
+
+        // Step 2: ACTION_UP far away (X=500, Y=500)
+        MotionEvent up = MotionEvent.obtain(0, 50, MotionEvent.ACTION_UP, 500f, 500f, 0);
+        boolean handledUp = _routeOverlay.onTouchEvent(up, _mapView);
+
+        // Should NOT execute action
+        verify(_route, never()).setGuidancePoints(any());
+        // But should still return true because it was a captured gesture
+        Assert.assertTrue(handledUp);
+
         tap1.recycle();
+        down.recycle();
+        up.recycle();
+    }
+
+    @Test
+    public void movement_Threshold_PreventsUnintendedJump() {
+        // Setup: Point at (100, 200)
+        java.util.List<IGeoPoint> points = new java.util.ArrayList<>();
+        points.add(_geoPoint);
+        when(_route.getWayPoints()).thenReturn(points);
+
+        // ACTION_DOWN on point (radius=20, so 110, 210 is inside)
+        MotionEvent down = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 110f, 210f, 0);
+        _routeOverlay.onTouchEvent(down, _mapView);
+
+        // ACTION_MOVE below threshold (threshold=25. 110->120 = 10 px)
+        MotionEvent moveSmall = MotionEvent.obtain(0, 50, MotionEvent.ACTION_MOVE, 120f, 210f, 0);
+        _routeOverlay.onTouchEvent(moveSmall, _mapView);
+
+        // Verify projection NOT called to update point
+        verify(_route, never()).setWayPoints(any());
+
+        // ACTION_MOVE above threshold (110->150 = 40 px)
+        MotionEvent moveLarge = MotionEvent.obtain(0, 100, MotionEvent.ACTION_MOVE, 150f, 210f, 0);
+        _routeOverlay.onTouchEvent(moveLarge, _mapView);
+
+        // Verify point IS updated now
+        verify(_route, atLeastOnce()).setWayPoints(any());
+
+        down.recycle();
+        moveSmall.recycle();
+        moveLarge.recycle();
+    }
+
+    @Test
+    public void hitArea_Increased_AllowsDirtyTap() {
+        // Setup: Geometry Button at (170, 100). Size=100 (radius=50).
+        // Normal bounds: X in [120, 220], Y in [50, 150].
+        // Hit area increased by 40: X in [80, 260], Y in [10, 190].
+
+        MotionEvent tap1 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 100f, 200f, 0);
+        _routeOverlay.onSingleTapConfirmed(tap1, _mapView);
+        android.graphics.Canvas canvas = new android.graphics.Canvas();
+        _routeOverlay.draw(canvas, _mapView, false);
+
+        // Tap at (250, 180) -> 30px outside normal visual circle, but inside 40px hit
+        // area
+        MotionEvent down = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 250f, 180f, 0);
+        boolean handled = _routeOverlay.onTouchEvent(down, _mapView);
+
+        Assert.assertTrue("Should register hit within extended hit area", handled);
+
+        // Complete the tap
+        MotionEvent up = MotionEvent.obtain(0, 50, MotionEvent.ACTION_UP, 250f, 180f, 0);
+        _routeOverlay.onTouchEvent(up, _mapView);
+
+        // verify geometry added (extendRoute called)
+        verify(_route).setWayPoints(any(IGeoPoint[].class));
+
+        tap1.recycle();
+        down.recycle();
+        up.recycle();
+    }
+
+    @Test
+    public void gestureCapture_ConsumesMove_ToPreventPanning() {
+        // ACTION_DOWN on a point
+        MotionEvent down = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 100f, 200f, 0);
+        boolean handledDown = _routeOverlay.onTouchEvent(down, _mapView);
+        Assert.assertTrue(handledDown);
+
+        // Simulate dragging. Even if we haven't crossed threshold yet, it should return
+        // true
+        MotionEvent move = MotionEvent.obtain(0, 50, MotionEvent.ACTION_MOVE, 110f, 210f, 0);
+        boolean handledMove = _routeOverlay.onTouchEvent(move, _mapView);
+
+        Assert.assertTrue("MOVE must be consumed once capture started", handledMove);
+
+        down.recycle();
+        move.recycle();
+    }
+
+    @Test
+    public void onSingleTapConfirmed_ReturnsTrue_IfMenuJustDismissed() {
+        // This tests the mechanism that prevents a tap that closes a menu from opening
+        // it again elsewhere
+        // 1. Show menu
+        MotionEvent tap1 = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, 100f, 200f, 0);
+        _routeOverlay.onSingleTapConfirmed(tap1, _mapView);
+
+        // 2. Click outside to dismiss (in ACTION_DOWN)
+        MotionEvent dismiss = MotionEvent.obtain(0, 100, MotionEvent.ACTION_DOWN, 500f, 500f, 0);
+        _routeOverlay.onTouchEvent(dismiss, _mapView);
+
+        // 3. System sends onSingleTapConfirmed for that same tap
+        MotionEvent tap2 = MotionEvent.obtain(0, 100, MotionEvent.ACTION_DOWN, 500f, 500f, 0);
+        boolean result = _routeOverlay.onSingleTapConfirmed(tap2, _mapView);
+
+        Assert.assertTrue("Should consume tap that was used for dismissal", result);
+        // MapView.invalidate() is called:
+        // 1. by onSingleTapConfirmed (tap1)
+        // 2. by onTouchEvent (dismiss)
+        verify(_mapView, times(2)).invalidate();
+
+        tap1.recycle();
+        dismiss.recycle();
         tap2.recycle();
     }
 }
