@@ -31,6 +31,7 @@ import org.osmdroid.util.GeoPoint;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -96,6 +97,20 @@ public class RouteOverlay extends Overlay {
 	private final Point _geometryButtonPos = new Point();
 	private final Paint _contextButtonPaint = new Paint();
 	private final Paint _contextIconPaint = new Paint();
+	private final Paint _radiusLabelPaint = new Paint();
+	private final Paint _radiusLabelBackgroundPaint = new Paint();
+
+	private float _currentX, _currentY;
+	private final float _snapInterval = 50f;
+	private final float _snapThreshold = 15f;
+	private final float _minGuidanceRadius = 10f;
+	private final float _radiusLabelOffsetY = 100f;
+	private final float _radiusLabelTextSize = 35f;
+	private final float _radiusLabelPaddingH = 15f;
+	private final float _radiusLabelPaddingV = 10f;
+	private final int _radiusLabelBgAlpha = 160;
+	private final float _radiusLabelRoundedCorner = 10f;
+	private final int _defaultGuidanceRadius = 200;
 
 	private final Runnable _longPressRunnable = new Runnable() {
 		@Override
@@ -168,6 +183,17 @@ public class RouteOverlay extends Overlay {
 		_contextIconPaint.setAntiAlias(true);
 		_contextIconPaint.setStrokeCap(Paint.Cap.ROUND);
 		_contextIconPaint.setStrokeJoin(Paint.Join.ROUND);
+
+		_radiusLabelPaint.setColor(Color.WHITE);
+		_radiusLabelPaint.setTextSize(_radiusLabelTextSize);
+		_radiusLabelPaint.setAntiAlias(true);
+		_radiusLabelPaint.setTextAlign(Paint.Align.CENTER);
+		_radiusLabelPaint.setFakeBoldText(true);
+
+		_radiusLabelBackgroundPaint.setColor(Color.BLACK);
+		_radiusLabelBackgroundPaint.setAlpha(_radiusLabelBgAlpha);
+		_radiusLabelBackgroundPaint.setStyle(Paint.Style.FILL);
+		_radiusLabelBackgroundPaint.setAntiAlias(true);
 
 		_route = route;
 	}
@@ -242,6 +268,28 @@ public class RouteOverlay extends Overlay {
 					Paint radiusPaint = isEmpty ? _warningRadiusPaint : _guidanceRadiusPaint;
 
 					canvas.drawCircle(screenPoint.x, screenPoint.y, radiusInPixels, radiusPaint);
+
+					// Draw current radius label if resizing
+					if (_resizingGuidancePointIndex == i) {
+						String label = String.format(Locale.getDefault(), "%.0f m", radiusInMeters);
+						float textWidth = _radiusLabelPaint.measureText(label);
+						Paint.FontMetrics fm = _radiusLabelPaint.getFontMetrics();
+						float textHeight = fm.descent - fm.ascent;
+
+						// Position the box above the finger
+						float boxX = _currentX;
+						float boxY = _currentY - _radiusLabelOffsetY; // Above the finger to not be covered
+
+						RectF bgRect = new RectF(
+								boxX - textWidth / 2 - _radiusLabelPaddingH,
+								boxY - textHeight / 2 - _radiusLabelPaddingV,
+								boxX + textWidth / 2 + _radiusLabelPaddingH,
+								boxY + textHeight / 2 + _radiusLabelPaddingV);
+
+						canvas.drawRoundRect(bgRect, _radiusLabelRoundedCorner, _radiusLabelRoundedCorner,
+								_radiusLabelBackgroundPaint);
+						canvas.drawText(label, boxX, boxY - fm.ascent / 2 - fm.descent / 2, _radiusLabelPaint);
+					}
 
 					// Draw point
 					canvas.drawCircle(screenPoint.x, screenPoint.y, _pointRadius, pointPaint);
@@ -411,6 +459,8 @@ public class RouteOverlay extends Overlay {
 			_gestureCaptured = false;
 			_initialX = x;
 			_initialY = y;
+			_currentX = x;
+			_currentY = y;
 
 			if (_showContextButtons) {
 				if (isInsideContextGuidance(x, y)) {
@@ -567,6 +617,9 @@ public class RouteOverlay extends Overlay {
 					_handler.removeCallbacks(_longPressRunnable);
 				}
 
+				_currentX = x;
+				_currentY = y;
+
 				if (_isMoving) {
 					if (_draggedPointIndex != -1) {
 						IGeoPoint newGeoPoint = projection.fromPixels((int) x, (int) y);
@@ -598,8 +651,14 @@ public class RouteOverlay extends Overlay {
 									.distanceToAsDouble(touchGeo);
 
 							float newRadius = _initialRadius + (float) (currentDist - _initialTouchDist);
-							if (newRadius < 10)
-								newRadius = 10;
+							if (newRadius < _minGuidanceRadius)
+								newRadius = _minGuidanceRadius;
+
+							// Magnet effect: snap to multiples of 50 if within 15 meters
+							float nearestSnap = Math.round(newRadius / _snapInterval) * _snapInterval;
+							if (Math.abs(newRadius - nearestSnap) < _snapThreshold) {
+								newRadius = nearestSnap;
+							}
 
 							guidancePoints[_resizingGuidancePointIndex] = new GuidancePoint(gp.getKey(),
 									gp.getLatitude(), gp.getLongitude(), gp.getNarrative(), (int) newRadius);
@@ -724,7 +783,7 @@ public class RouteOverlay extends Overlay {
 
 	private void createGuidancePoint(IGeoPoint p) {
 		GuidancePoint newGp = new GuidancePoint(UUID.randomUUID().toString(), p.getLatitude(), p.getLongitude(), "",
-				50);
+				_defaultGuidanceRadius);
 
 		GuidancePoint[] currentPoints = _route.getGuidancePoints();
 		List<GuidancePoint> pointsList;
