@@ -60,9 +60,9 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
     private static final int POST_NOTIFICATIONS_PERMISSION_REQUEST_CODE = 1003;
 
-// Maybe necessay when routes are cached from the cloud
-//    private static final String ROUTES_DIR_PATH = "/routes/";
-//    private static final String FILE_EXTENSION_JSON = ".json";
+    // Maybe necessay when routes are cached from the cloud
+    // private static final String ROUTES_DIR_PATH = "/routes/";
+    // private static final String FILE_EXTENSION_JSON = ".json";
 
     private static final double DEFAULT_ZOOM = 12d;
     private final int ROUTE_COLOR = 0xa0ff6010;
@@ -74,7 +74,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private static final String INTERNAL_STATE_ZOOM_KEY = "zoom";
     private static final String INTERNAL_STATE_CENTER_LON_KEY = "center_lon";
     private static final String INTERNAL_STATE_CENTER_LAT_KEY = "center_lat";
-    private static Route _currentRoute; //TODO La ruta se debe guardar en _instanceState para recuperarla en onResume()
+    private static Route _currentRoute; // TODO La ruta se debe guardar en _instanceState para recuperarla en onResume()
     private static Uri _currentRouteUri;
 
     private final HashMap<String, RouteOverlay> _routeOverlaysMap = new HashMap<>();
@@ -86,19 +86,19 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private ExtendedMyLocationNewOverlay _myLocationOverlay;
     private GuidanceManager _guidanceManager;
     private ConnectivityManager _connectivityManager;
-    //Indica el estado de la conexión de datos de la última vez que se comprobó
+    // Indica el estado de la conexión de datos de la última vez que se comprobó
     private boolean _hasDataNetwork;
 
     private Gson _routeSerializer;
     private FilePicker _filePicker;
     private Menu _menu;
 
-    private String getDataPath(){
+    private String getDataPath() {
 
         return getBaseContext().getFilesDir().getAbsolutePath();
     }
 
-    private void saveMapState(double latitude, double longitude, double zoom){
+    private void saveMapState(double latitude, double longitude, double zoom) {
         Log.d(LOG_TAG,
                 String.format("Saving: lat %1$f; lon %2$f; zoom %3$f", latitude, longitude, zoom));
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
@@ -109,11 +109,11 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                 .apply();
     }
 
-    private void restoreMapState(){
+    private void restoreMapState() {
         SharedPreferences preferences = getPreferences(MODE_PRIVATE);
         float longitude = preferences.getFloat(INTERNAL_STATE_CENTER_LON_KEY, DEFAULT_MAP_CENTER_LONGITUDE);
         float latitude = preferences.getFloat(INTERNAL_STATE_CENTER_LAT_KEY, DEFAULT_MAP_CENTER_LATITUDE);
-        float zoom = preferences.getFloat(INTERNAL_STATE_ZOOM_KEY, (float)DEFAULT_ZOOM);
+        float zoom = preferences.getFloat(INTERNAL_STATE_ZOOM_KEY, (float) DEFAULT_ZOOM);
         Log.d(LOG_TAG,
                 String.format("Reading: lat %1$f; lon %2$f; zoom %3$f", latitude, longitude, zoom));
         _mapController.setZoom(zoom);
@@ -141,13 +141,14 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         // Force to use the file cache instead the default database cache
         _mapView.setTileProvider(new MapTileProviderBasic(this,
                 new XYTileSource("Mapnik", 1, 18, 256,
-                        ".png", new String[]{
-                        "https://a.tile.openstreetmap.org/",
-                        "https://b.tile.openstreetmap.org/",
-                        "https://c.tile.openstreetmap.org/"
-                }),
+                        ".png", new String[] {
+                                "https://a.tile.openstreetmap.org/",
+                                "https://b.tile.openstreetmap.org/",
+                                "https://c.tile.openstreetmap.org/"
+                        }),
                 new TileWriter()));
-        //_mapView.setUseDataConnection(false); // Uncomment to debug without connection
+        // _mapView.setUseDataConnection(false); // Uncomment to debug without
+        // connection
         _tilesFetcher = new TilesFetcher(_mapView, getPackageName(),
                 getDataPath() + "/tiles",
                 mapConfig.getOsmdroidTileCache().getAbsolutePath());
@@ -175,7 +176,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
             startActivity(intent);
         }
 
-        //Iniciar serializador
+        // Iniciar serializador
         _routeSerializer = new GsonBuilder()
                 .registerTypeAdapter(IGeoPoint.class, new GeoPointSerializer())
                 .create();
@@ -188,12 +189,13 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
             @Override
             public void onError() {
-                Toast.makeText(QuickRouteMapActivity.this, "No he podido leer ningún archivo", Toast.LENGTH_LONG).show();
+                Toast.makeText(QuickRouteMapActivity.this, "No he podido leer ningún archivo", Toast.LENGTH_LONG)
+                        .show();
             }
         });
 
-        if(!getSharedPreferences(AppInfoActivity.class.getSimpleName(), MODE_PRIVATE)
-                .getBoolean(AppInfoActivity.NO_SHOW_ON_STARTUP_PREFERENCE, false)){
+        if (!getSharedPreferences(AppInfoActivity.class.getSimpleName(), MODE_PRIVATE)
+                .getBoolean(AppInfoActivity.NO_SHOW_ON_STARTUP_PREFERENCE, false)) {
             showInfo();
         }
     }
@@ -255,7 +257,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         _currentRouteUri = uri;
         clear();
 
-        //Añadir rutas
+        // Añadir rutas
         Log.d(LOG_TAG, "Añadiendo ruta");
 
         try {
@@ -282,25 +284,26 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         }
     }
 
-// Maybe necessary when routes are cached from cloud
-//    private void loadRoute(String path) {
-//
-//        try {
-//            FileInputStream fis = new FileInputStream(path);
-//            loadRoute(new BufferedReader(new InputStreamReader(fis)));
-//            fis.close();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
+    // Maybe necessary when routes are cached from cloud
+    // private void loadRoute(String path) {
+    //
+    // try {
+    // FileInputStream fis = new FileInputStream(path);
+    // loadRoute(new BufferedReader(new InputStreamReader(fis)));
+    // fis.close();
+    // } catch (Exception e) {
+    // e.printStackTrace();
+    // }
+    // }
 
     private void showRoute() {
-
         if (_currentRoute != null) {
-
-            RouteOverlay routeOverlay = new RouteOverlay(_currentRoute, ROUTE_COLOR, ROUTE_WIDTH);
-            _routeOverlaysMap.put(_currentRoute.getKey(), routeOverlay);
-            _mapOverlayManager.add(0, routeOverlay);
+            String key = _currentRoute.getKey();
+            if (!_routeOverlaysMap.containsKey(key)) {
+                RouteOverlay routeOverlay = new RouteOverlay(_currentRoute, ROUTE_COLOR, ROUTE_WIDTH);
+                _routeOverlaysMap.put(key, routeOverlay);
+                _mapOverlayManager.add(0, routeOverlay); // Add at index 0 to stay below location icon
+            }
         }
     }
 
@@ -367,11 +370,12 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                 item.setTitle(newMode ? R.string.finishEditingRoute : R.string.editRoute);
             }
         }
-        
+
         if (newMode) {
             Toast.makeText(this, "Modo edición activado", Toast.LENGTH_SHORT).show();
         } else {
-            // Actualizar los puntos de guiado en el gestor de proximidad al terminar de editar
+            // Actualizar los puntos de guiado en el gestor de proximidad al terminar de
+            // editar
             _guidanceManager.setCurrentRouteGuidance(_currentRoute.getGuidancePoints());
         }
     }
@@ -412,7 +416,8 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
             if (currentName != null && currentName.contains(".")) {
                 currentName = currentName.substring(0, currentName.lastIndexOf('.'));
             }
-            if (currentName == null) currentName = "Ruta";
+            if (currentName == null)
+                currentName = "Ruta";
         }
         input.setText(String.format("%s_editada", currentName));
 
@@ -506,52 +511,57 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         }
     }
 
-//    Old behaviour. Possible example for reading cached routes from cloud (when implemented)
-//
-//    private void launchRouteFileBrowser() {
-//
-//        File routesDir = new File(getDataPath() + ROUTES_DIR_PATH);
-//        ArrayList<String> routePathList = new ArrayList<>();
-//        File [] routeFiles = routesDir.listFiles((dir, name) -> name.endsWith(FILE_EXTENSION_JSON));
-//        if (routeFiles != null && routeFiles.length != 0) {
-//            for (File routeFile : Objects.requireNonNull(routeFiles)) {
-//
-//                routePathList.add(routeFile.getName());
-//            }
-//        }
-//
-//        if(routePathList.size() != 0) {
-//            new AlertDialog.Builder(this)
-//                    .setTitle(R.string.selectRoute)
-//                    .setNegativeButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())
-//                    .setItems(routePathList.toArray(new String[routePathList.size()]), (dialog, which)
-//                            -> onRouteSelected(Collections.unmodifiableList(routePathList), which))
-//                    .create().show();
-//        } else {
-//            new AlertDialog.Builder(this)
-//                    .setMessage(R.string.noRouteMessage)
-//                    .setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss())
-//                    .create().show();
-//        }
-//    }
+    // Old behaviour. Possible example for reading cached routes from cloud (when
+    // implemented)
+    //
+    // private void launchRouteFileBrowser() {
+    //
+    // File routesDir = new File(getDataPath() + ROUTES_DIR_PATH);
+    // ArrayList<String> routePathList = new ArrayList<>();
+    // File [] routeFiles = routesDir.listFiles((dir, name) ->
+    // name.endsWith(FILE_EXTENSION_JSON));
+    // if (routeFiles != null && routeFiles.length != 0) {
+    // for (File routeFile : Objects.requireNonNull(routeFiles)) {
+    //
+    // routePathList.add(routeFile.getName());
+    // }
+    // }
+    //
+    // if(routePathList.size() != 0) {
+    // new AlertDialog.Builder(this)
+    // .setTitle(R.string.selectRoute)
+    // .setNegativeButton(android.R.string.cancel, (dialog, which) ->
+    // dialog.dismiss())
+    // .setItems(routePathList.toArray(new String[routePathList.size()]), (dialog,
+    // which)
+    // -> onRouteSelected(Collections.unmodifiableList(routePathList), which))
+    // .create().show();
+    // } else {
+    // new AlertDialog.Builder(this)
+    // .setMessage(R.string.noRouteMessage)
+    // .setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss())
+    // .create().show();
+    // }
+    // }
 
     private void launchRouteFileBrowser() {
         _filePicker.openFilePicker();
     }
 
-// Maybe necessary again when routes are cached from the cloud.
-//    private void onRouteSelected(List<String> routePathList,  int which){
-//
-//        String routeName = routePathList.get(which);
-//        Log.d(LOG_TAG, String.format("Selected route: '%1$s'", routeName));
-//        String routeFilePath = String.format("%1$s%2$s%3$s", getDataPath(), ROUTES_DIR_PATH, routeName);
-//        if (!new File(routeFilePath).exists()) {
-//            Log.w(LOG_TAG, String.format("File '%1$s' doesn't exist!", routeFilePath));
-//            Toast.makeText(this, "Route file not found!", Toast.LENGTH_SHORT).show();
-//            return;
-//        }
-//        loadRoute(routeFilePath);
-//    }
+    // Maybe necessary again when routes are cached from the cloud.
+    // private void onRouteSelected(List<String> routePathList, int which){
+    //
+    // String routeName = routePathList.get(which);
+    // Log.d(LOG_TAG, String.format("Selected route: '%1$s'", routeName));
+    // String routeFilePath = String.format("%1$s%2$s%3$s", getDataPath(),
+    // ROUTES_DIR_PATH, routeName);
+    // if (!new File(routeFilePath).exists()) {
+    // Log.w(LOG_TAG, String.format("File '%1$s' doesn't exist!", routeFilePath));
+    // Toast.makeText(this, "Route file not found!", Toast.LENGTH_SHORT).show();
+    // return;
+    // }
+    // loadRoute(routeFilePath);
+    // }
 
     @Override
     public GuidancePoint[] getCurrentRouteGuidance() {
@@ -559,7 +569,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         return _currentRoute != null ? _currentRoute.getGuidancePoints() : null;
     }
 
-    private void checkPermissions(){
+    private void checkPermissions() {
         checkPermission(Manifest.permission.ACCESS_FINE_LOCATION,
                 LOCATION_PERMISSION_REQUEST_CODE,
                 new IPermissionCheckActions() {
@@ -607,20 +617,18 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
     private final HashMap<Integer, IPermissionCheckActions> _actionsMap = new HashMap<>();
 
-    private void checkPermission(String permission, int requestCode, IPermissionCheckActions permissionCheckActions){
+    private void checkPermission(String permission, int requestCode, IPermissionCheckActions permissionCheckActions) {
         Log.d(LOG_TAG, String.format("Checking %s permission", permission));
-        if (ActivityCompat.checkSelfPermission(this, permission)
-                != PackageManager.PERMISSION_GRANTED) {
-            if(!_actionsMap.containsKey(requestCode)) {
+        if (ActivityCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+            if (!_actionsMap.containsKey(requestCode)) {
                 _actionsMap.put(requestCode, permissionCheckActions);
             }
             Log.d(LOG_TAG, String.format("Asking for %s permission", permission));
             ActivityCompat.requestPermissions(
                     this,
-                    new String[]{permission},
-                    requestCode
-            );
-        }else{
+                    new String[] { permission },
+                    requestCode);
+        } else {
             Log.d(LOG_TAG, String.format("Permission %s was already granted", permission));
             permissionCheckActions.doOnSuccess();
         }
@@ -628,13 +636,13 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
+            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Log.i(LOG_TAG, String.format("User granted %s permission", permissions[0]));
             Objects.requireNonNull(_actionsMap.get(requestCode)).doOnSuccess();
-        }else{
+        } else {
             Log.w(LOG_TAG, String.format("User denied %s permission", permissions[0]));
             Objects.requireNonNull(_actionsMap.get(requestCode)).doOnFail();
         }

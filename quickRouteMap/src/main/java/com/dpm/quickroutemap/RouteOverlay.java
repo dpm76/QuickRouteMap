@@ -66,6 +66,7 @@ public class RouteOverlay extends Overlay {
 	private static final int PRESS_EDIT_GUIDANCE = 2;
 	private static final int PRESS_CONTEXT_GUIDANCE = 3;
 	private static final int PRESS_CONTEXT_GEOMETRY = 4;
+	private static final int PRESS_CREATE_GUIDANCE_TO_WAYPOINT = 5;
 	private int _resizingGuidancePointIndex = -1;
 	private float _initialRadius;
 	private float _initialTouchDist;
@@ -80,6 +81,7 @@ public class RouteOverlay extends Overlay {
 	private final int _motionThreshold = 25;
 	private Bitmap _deleteBitmap;
 	private Bitmap _editBitmap;
+	private Bitmap _addBitmap;
 	private Bitmap _warningBitmap;
 	private final Point _deleteIconScreenPos = new Point();
 	private final Point _editIconScreenPos = new Point();
@@ -117,7 +119,13 @@ public class RouteOverlay extends Overlay {
 		public void run() {
 			if (_draggedPointIndex != -1 && !_isMoving) {
 				_longPressedPointIndex = _draggedPointIndex;
-				_draggedPointIndex = -1; // Detener arrastre si se detecta pulsación larga
+				_draggedPointIndex = -1; // Detener
+											// arrastre
+											// si
+											// se
+											// detecta
+											// pulsación
+											// larga
 				if (_mapView != null) {
 					_mapView.invalidate();
 				}
@@ -227,9 +235,6 @@ public class RouteOverlay extends Overlay {
 
 			if (_isEditMode) {
 				canvas.drawCircle(screenPoint.x, screenPoint.y, _pointRadius, _pointPaint);
-				if (_longPressedPointIndex == 0) {
-					drawDeleteIcon(canvas, screenPoint);
-				}
 			}
 
 			for (int i = 1; i < wayPoints.size(); i++) {
@@ -237,9 +242,6 @@ public class RouteOverlay extends Overlay {
 				path.lineTo(screenPoint.x, screenPoint.y);
 				if (_isEditMode) {
 					canvas.drawCircle(screenPoint.x, screenPoint.y, _pointRadius, _pointPaint);
-					if (_longPressedPointIndex == i) {
-						drawDeleteIcon(canvas, screenPoint);
-					}
 				}
 			}
 			if (_route.isClosed()) {
@@ -269,16 +271,47 @@ public class RouteOverlay extends Overlay {
 
 					canvas.drawCircle(screenPoint.x, screenPoint.y, radiusInPixels, radiusPaint);
 
-					// Draw current radius label if resizing
-					if (_resizingGuidancePointIndex == i) {
-						String label = String.format(Locale.getDefault(), "%.0f m", radiusInMeters);
+					// Draw point
+					canvas.drawCircle(screenPoint.x, screenPoint.y, _pointRadius, pointPaint);
+
+					if (isEmpty) {
+						drawWarningIcon(canvas, screenPoint);
+					}
+				}
+			}
+
+			// --- DRAW UI OVERLAYS (Must be after all points/path to be on top) ---
+			if (_isEditMode) {
+				// Draw Waypoint Icons
+				if (_longPressedPointIndex != -1 && _longPressedPointIndex < wayPoints.size()) {
+					mapView.getProjection().toPixels(wayPoints.get(_longPressedPointIndex), screenPoint);
+					drawWayPointIcons(canvas, screenPoint);
+				}
+
+				// Draw Guidance Point Icons / Labels
+				if (_route.getGuidancePoints() != null) {
+					GuidancePoint[] guidancePoints = _route.getGuidancePoints();
+
+					// Icons for long pressed guidance point
+					if (_longPressedGuidancePointIndex != -1
+							&& _longPressedGuidancePointIndex < guidancePoints.length) {
+						GuidancePoint gp = guidancePoints[_longPressedGuidancePointIndex];
+						if (gp.getPoint() != null) {
+							mapView.getProjection().toPixels(gp.getPoint(), screenPoint);
+							drawGuidancePointIcons(canvas, screenPoint);
+						}
+					}
+
+					// Radius label for resizing guidance point
+					if (_resizingGuidancePointIndex != -1 && _resizingGuidancePointIndex < guidancePoints.length) {
+						GuidancePoint gp = guidancePoints[_resizingGuidancePointIndex];
+						String label = String.format(Locale.getDefault(), "%.0f m", gp.getRadius());
 						float textWidth = _radiusLabelPaint.measureText(label);
 						Paint.FontMetrics fm = _radiusLabelPaint.getFontMetrics();
 						float textHeight = fm.descent - fm.ascent;
 
-						// Position the box above the finger
 						float boxX = _currentX;
-						float boxY = _currentY - _radiusLabelOffsetY; // Above the finger to not be covered
+						float boxY = _currentY - _radiusLabelOffsetY;
 
 						RectF bgRect = new RectF(
 								boxX - textWidth / 2 - _radiusLabelPaddingH,
@@ -290,17 +323,6 @@ public class RouteOverlay extends Overlay {
 								_radiusLabelBackgroundPaint);
 						canvas.drawText(label, boxX, boxY - fm.ascent / 2 - fm.descent / 2, _radiusLabelPaint);
 					}
-
-					// Draw point
-					canvas.drawCircle(screenPoint.x, screenPoint.y, _pointRadius, pointPaint);
-
-					if (isEmpty) {
-						drawWarningIcon(canvas, screenPoint);
-					}
-
-					if (_longPressedGuidancePointIndex == i) {
-						drawGuidancePointIcons(canvas, screenPoint);
-					}
 				}
 			}
 		}
@@ -310,35 +332,46 @@ public class RouteOverlay extends Overlay {
 		}
 	}
 
-	private void drawDeleteIcon(Canvas canvas, Point pointPos) {
+	private void drawWayPointIcons(Canvas canvas, Point pointPos) {
 		if (_deleteBitmap == null && _mapView != null) {
 			_deleteBitmap = BitmapFactory.decodeResource(_mapView.getResources(), android.R.drawable.ic_menu_delete);
 			_deleteBitmap = Bitmap.createScaledBitmap(_deleteBitmap, _deleteIconSize, _deleteIconSize, true);
 		}
-		if (_deleteBitmap != null) {
+		if (_addBitmap == null && _mapView != null) {
+			_addBitmap = BitmapFactory.decodeResource(_mapView.getResources(), android.R.drawable.ic_menu_add);
+			_addBitmap = Bitmap.createScaledBitmap(_addBitmap, _editIconSize, _editIconSize, true);
+		}
+
+		if (_deleteBitmap != null && _addBitmap != null) {
 			int offset = (int) _pointRadius + 20;
-			int x = pointPos.x + offset;
-			int y = pointPos.y - offset - _deleteIconSize;
+			int xDelete = pointPos.x + offset;
+			int yDelete = pointPos.y - offset - _deleteIconSize;
 
 			// Reposicionar si se sale por la derecha
-			if (x + _deleteIconSize > _mapView.getWidth()) {
-				x = pointPos.x - offset - _deleteIconSize;
+			if (xDelete + _deleteIconSize + _editIconSize + 20 > _mapView.getWidth()) {
+				xDelete = pointPos.x - offset - _deleteIconSize - _editIconSize - 20;
 			}
 			// Reposicionar si se sale por arriba
-			if (y < 0) {
-				y = pointPos.y + offset;
+			if (yDelete < 0) {
+				yDelete = pointPos.y + offset;
 			}
 			// Reposicionar si se sale por la izquierda (caso extremo)
-			if (x < 0) {
-				x = offset;
+			if (xDelete < 0) {
+				xDelete = offset;
 			}
 			// Reposicionar si se sale por abajo (caso extremo)
-			if (y + _deleteIconSize > _mapView.getHeight()) {
-				y = _mapView.getHeight() - offset - _deleteIconSize;
+			if (yDelete + _deleteIconSize > _mapView.getHeight()) {
+				yDelete = _mapView.getHeight() - offset - _deleteIconSize;
 			}
 
-			_deleteIconScreenPos.set(x, y);
-			drawIconButton(canvas, _deleteBitmap, x, y, _iconPaint);
+			_deleteIconScreenPos.set(xDelete, yDelete);
+			drawIconButton(canvas, _deleteBitmap, xDelete, yDelete, _iconPaint);
+
+			int xAdd = xDelete + _deleteIconSize + 20;
+			int yAdd = yDelete;
+
+			_editIconScreenPos.set(xAdd, yAdd);
+			drawIconButton(canvas, _addBitmap, xAdd, yAdd, _editIconPaint);
 		}
 	}
 
@@ -504,6 +537,11 @@ public class RouteOverlay extends Overlay {
 			if (_longPressedPointIndex != -1) {
 				if (isInsideDeleteIcon(x, y)) {
 					_pressedButton = PRESS_DELETE_WAYPOINT;
+					_gestureCaptured = true;
+					return true;
+				}
+				if (isInsideEditIcon(x, y)) {
+					_pressedButton = PRESS_CREATE_GUIDANCE_TO_WAYPOINT;
 					_gestureCaptured = true;
 					return true;
 				}
@@ -697,6 +735,11 @@ public class RouteOverlay extends Overlay {
 					deleteWayPoint(_longPressedPointIndex);
 					_longPressedPointIndex = -1;
 					mapView.invalidate();
+				} else if (btn == PRESS_CREATE_GUIDANCE_TO_WAYPOINT && isInsideEditIcon(x, y)) {
+					IGeoPoint p = _route.getWayPoints().get(_longPressedPointIndex);
+					createGuidancePoint(p);
+					_longPressedPointIndex = -1;
+					mapView.invalidate();
 				}
 				_justDismissedDeleteIcon = false;
 				return true;
@@ -708,6 +751,18 @@ public class RouteOverlay extends Overlay {
 
 			boolean wasEditing = _draggedPointIndex != -1 || _draggedGuidancePointIndex != -1
 					|| _resizingGuidancePointIndex != -1;
+
+			if (!_isMoving && action == MotionEvent.ACTION_UP) {
+				if (_draggedPointIndex != -1) {
+					_longPressedPointIndex = _draggedPointIndex;
+					mapView.invalidate();
+					consumed = true;
+				} else if (_draggedGuidancePointIndex != -1) {
+					_longPressedGuidancePointIndex = _draggedGuidancePointIndex;
+					mapView.invalidate();
+					consumed = true;
+				}
+			}
 
 			_draggedPointIndex = -1;
 			_draggedGuidancePointIndex = -1;
