@@ -31,7 +31,7 @@ public class GhostRoutePreventionTest {
                     // Set as current route
                     Field currentRouteField = QuickRouteMapActivity.class.getDeclaredField("_currentRoute");
                     currentRouteField.setAccessible(true);
-                    currentRouteField.set(null, route);
+                    currentRouteField.set(activity, route);
 
                     Method showRouteMethod = QuickRouteMapActivity.class.getDeclaredMethod("showRoute");
                     showRouteMethod.setAccessible(true);

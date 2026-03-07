@@ -29,6 +29,7 @@ import com.dpm.quickroutemap.navigation.GuidancePoint;
 import com.dpm.quickroutemap.navigation.GuidancePointProximityService;
 import com.dpm.quickroutemap.navigation.IGuidanceProvider;
 import com.dpm.quickroutemap.navigation.Route;
+import com.dpm.quickroutemap.navigation.RouteUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
@@ -74,8 +75,8 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     private static final String INTERNAL_STATE_ZOOM_KEY = "zoom";
     private static final String INTERNAL_STATE_CENTER_LON_KEY = "center_lon";
     private static final String INTERNAL_STATE_CENTER_LAT_KEY = "center_lat";
-    private static Route _currentRoute; // TODO La ruta se debe guardar en _instanceState para recuperarla en onResume()
-    private static Uri _currentRouteUri;
+    private Route _currentRoute; // TODO La ruta se debe guardar en _instanceState para recuperarla en onResume()
+    private Uri _currentRouteUri;
 
     private final HashMap<String, RouteOverlay> _routeOverlaysMap = new HashMap<>();
 
@@ -278,6 +279,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
             IGeoPoint center = _currentRoute.getWayPoints().get(0);
             _mapController.setCenter(center);
             saveMapState(center.getLatitude(), center.getLongitude(), _mapView.getZoomLevelDouble());
+            updateMenuTitles();
         } catch (Exception e) {
             Log.e(LOG_TAG, "No se ha podido cargar la ruta", e);
             Toast.makeText(this, "Error al cargar el archivo JSON o la ruta", Toast.LENGTH_LONG).show();
@@ -316,7 +318,23 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
         this._menu = menu;
+        updateMenuTitles();
         return true;
+    }
+
+    private void updateMenuTitles() {
+        if (_menu != null) {
+            MenuItem editItem = _menu.findItem(R.id.editRouteMenuItem);
+            if (editItem != null) {
+                if (_currentRoute == null) {
+                    editItem.setTitle(R.string.createRoute);
+                } else {
+                    RouteOverlay overlay = _routeOverlaysMap.get(_currentRoute.getKey());
+                    boolean isEditing = (overlay != null && overlay.isEditMode());
+                    editItem.setTitle(isEditing ? R.string.finishEditingRoute : R.string.editRoute);
+                }
+            }
+        }
     }
 
     @Override
@@ -345,8 +363,11 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
     private void toggleEditMode() {
         if (_currentRoute == null) {
-            Toast.makeText(this, "No hay ninguna ruta cargada para editar", Toast.LENGTH_SHORT).show();
-            return;
+            _currentRoute = new Route();
+            _currentRoute.setWayPoints(new IGeoPoint[0]);
+            _currentRoute.setGuidancePoints(new GuidancePoint[0]);
+            RouteUtils.populateMissingProperties(_currentRoute, getString(R.string.defaultNewRouteName));
+            showRoute();
         }
 
         RouteOverlay overlay = _routeOverlaysMap.get(_currentRoute.getKey());
@@ -364,12 +385,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         overlay.setEditMode(newMode);
         _mapView.invalidate();
 
-        if (_menu != null) {
-            MenuItem item = _menu.findItem(R.id.editRouteMenuItem);
-            if (item != null) {
-                item.setTitle(newMode ? R.string.finishEditingRoute : R.string.editRoute);
-            }
-        }
+        updateMenuTitles();
 
         if (newMode) {
             Toast.makeText(this, "Modo edición activado", Toast.LENGTH_SHORT).show();

@@ -250,4 +250,33 @@ public class RouteOverlayTest {
         dismiss.recycle();
         tap2.recycle();
     }
+
+    @Test
+    public void draw_HandlesEmptyWaypoints() {
+        // Setup: 0 waypoints
+        when(_route.getWayPoints()).thenReturn(new java.util.ArrayList<IGeoPoint>());
+        android.graphics.Canvas canvas = mock(android.graphics.Canvas.class);
+
+        // Verify draw doesn't crash
+        _routeOverlay.draw(canvas, _mapView, false);
+
+        // Verify projection was NOT called (no waypoints to convert)
+        verify(_projection, never()).toPixels(any(IGeoPoint.class), any(Point.class));
+    }
+
+    @Test
+    public void draw_HandlesSingleWaypoint() {
+        // Setup: 1 waypoint
+        java.util.List<IGeoPoint> points = new java.util.ArrayList<>();
+        points.add(_geoPoint);
+        when(_route.getWayPoints()).thenReturn(points);
+        android.graphics.Canvas canvas = mock(android.graphics.Canvas.class);
+
+        _routeOverlay.draw(canvas, _mapView, false);
+
+        // Verify projection WAS called for the single point
+        verify(_projection).toPixels(eq(_geoPoint), any(Point.class));
+        // Verify circle drawn for that point
+        verify(canvas).drawCircle(anyFloat(), anyFloat(), anyFloat(), any(android.graphics.Paint.class));
+    }
 }

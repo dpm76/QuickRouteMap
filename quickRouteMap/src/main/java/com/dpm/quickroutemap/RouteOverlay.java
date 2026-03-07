@@ -223,33 +223,35 @@ public class RouteOverlay extends Overlay {
 	@Override
 	public void draw(Canvas canvas, MapView mapView, boolean isShadow) {
 		this._mapView = mapView;
-		if (!isShadow && (_route != null) && (_route.getWayPoints().size() > 1)) {
+		if (!isShadow && (_route != null)) {
 
 			List<IGeoPoint> wayPoints = _route.getWayPoints();
-
 			Point screenPoint = new Point();
-			Path path = new Path();
 
-			mapView.getProjection().toPixels(wayPoints.get(0), screenPoint);
-			path.moveTo(screenPoint.x, screenPoint.y);
+			if (!wayPoints.isEmpty()) {
+				Path path = new Path();
 
-			if (_isEditMode) {
-				canvas.drawCircle(screenPoint.x, screenPoint.y, _pointRadius, _pointPaint);
-			}
+				mapView.getProjection().toPixels(wayPoints.get(0), screenPoint);
+				path.moveTo(screenPoint.x, screenPoint.y);
 
-			for (int i = 1; i < wayPoints.size(); i++) {
-				mapView.getProjection().toPixels(wayPoints.get(i), screenPoint);
-				path.lineTo(screenPoint.x, screenPoint.y);
 				if (_isEditMode) {
 					canvas.drawCircle(screenPoint.x, screenPoint.y, _pointRadius, _pointPaint);
 				}
-			}
-			if (_route.isClosed()) {
-				mapView.getProjection().toPixels(wayPoints.get(0), screenPoint);
-				path.lineTo(screenPoint.x, screenPoint.y);
-			}
 
-			canvas.drawPath(path, _paint);
+				for (int i = 1; i < wayPoints.size(); i++) {
+					mapView.getProjection().toPixels(wayPoints.get(i), screenPoint);
+					path.lineTo(screenPoint.x, screenPoint.y);
+					if (_isEditMode) {
+						canvas.drawCircle(screenPoint.x, screenPoint.y, _pointRadius, _pointPaint);
+					}
+				}
+				if (_route.isClosed() && wayPoints.size() > 1) {
+					mapView.getProjection().toPixels(wayPoints.get(0), screenPoint);
+					path.lineTo(screenPoint.x, screenPoint.y);
+				}
+
+				canvas.drawPath(path, _paint);
+			}
 
 			if (_isEditMode && _route.getGuidancePoints() != null) {
 				GuidancePoint[] guidancePoints = _route.getGuidancePoints();

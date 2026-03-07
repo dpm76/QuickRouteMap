@@ -17,6 +17,8 @@
     <string name="app_info.close_battery_info_button.text">Entendido</string>
     <string name="app_info.no_show_on_startup.text">No mostrar al inicio</string>
     <string name="editRoute">Editar ruta</string>
+    <string name="createRoute">Crear nueva ruta</string>
+    <string name="defaultNewRouteName">Nueva ruta</string>
     <string name="finishEditingRoute">Terminar de editar</string>
     <string name="saveChangesTitle">Guardar cambios</string>
     <string name="saveChangesMessage">¿Quieres guardar las modificaciones realizadas en la ruta?</string>
