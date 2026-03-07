@@ -247,9 +247,17 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     }
 
     private void clear() {
-
         _mapOverlayManager.removeAll(_routeOverlaysMap.values());
         _routeOverlaysMap.clear();
+    }
+
+    private void closeRoute() {
+        clear();
+        _currentRoute = null;
+        _currentRouteUri = null;
+        _guidanceManager.setCurrentRouteGuidance(null);
+        _mapView.invalidate();
+        invalidateOptionsMenu();
     }
 
     private void loadRoute(BufferedReader reader, Uri uri) {
@@ -318,8 +326,14 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
         this._menu = menu;
-        updateMenuTitles();
         return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        this._menu = menu;
+        updateMenuTitles();
+        return super.onPrepareOptionsMenu(menu);
     }
 
     private void updateMenuTitles() {
@@ -334,7 +348,15 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
                     editItem.setTitle(isEditing ? R.string.finishEditingRoute : R.string.editRoute);
                 }
             }
+            MenuItem closeItem = _menu.findItem(R.id.closeRouteMenuItem);
+            if (closeItem != null) {
+                closeItem.setEnabled(_currentRoute != null);
+            }
         }
+    }
+
+    public Menu getOptionsMenu() {
+        return _menu;
     }
 
     @Override
@@ -347,6 +369,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
             case R.id.userCenterMenuItem -> centerAtUserLocation();
             case R.id.openRouteFileMenuItem -> launchRouteFileBrowser();
             case R.id.editRouteMenuItem -> toggleEditMode();
+            case R.id.closeRouteMenuItem -> closeRoute();
             case R.id.resetZoomMenuItem -> _mapController.setZoom(DEFAULT_ZOOM);
             case R.id.locationPermissionMenuItem -> requestPermissionsManually();
             case R.id.appInfoMenuItem -> showInfo();

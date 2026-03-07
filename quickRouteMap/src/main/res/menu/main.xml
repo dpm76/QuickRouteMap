@@ -21,6 +21,12 @@
 		android:title="@string/editRoute"
 		app:showAsAction="ifRoom" />
 	<item
+		android:id="@+id/closeRouteMenuItem"
+		android:icon="@android:drawable/ic_menu_close_clear_cancel"
+		android:title="@string/closeRouteMenuItemLabel"
+		android:enabled="false"
+		app:showAsAction="ifRoom" />
+	<item
 		android:id="@+id/locationPermissionMenuItem"
 		android:icon="@android:drawable/ic_menu_manage"
 		android:title="@string/locationPermissionMenuItemLabel"

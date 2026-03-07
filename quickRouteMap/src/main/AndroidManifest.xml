@@ -32,8 +32,8 @@
         <activity
             android:name=".QuickRouteMapActivity"
             android:exported="true"
-            android:launchMode="singleInstance"
-            android:screenOrientation="portrait">
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

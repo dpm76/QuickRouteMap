@@ -46,7 +46,9 @@ public class GuidancePointProximityManagerAndroidTest {
 
     @After
     public void teardown(){
-        _manager.close();
+        if (_manager != null) {
+            _manager.close();
+        }
     }
 
     @Test

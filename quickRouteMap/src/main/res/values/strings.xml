@@ -29,4 +29,5 @@
     <string name="saveError">Error al guardar la ruta</string>
     <string name="saveSuccess">Ruta guardada correctamente</string>
     <string name="routeNotSaved">Los cambios no se han guardado</string>
+    <string name="closeRouteMenuItemLabel">Cerrar ruta</string>
 </resources>
