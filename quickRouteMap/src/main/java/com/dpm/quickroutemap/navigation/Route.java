@@ -14,24 +14,36 @@ import org.osmdroid.api.IGeoPoint;
  */
 public class Route {
 
+	@com.google.gson.annotations.SerializedName("_key")
 	private String _key;
+	@com.google.gson.annotations.SerializedName("_name")
 	private String _name;
+	@com.google.gson.annotations.SerializedName("_description")
 	private String _description;
+	@com.google.gson.annotations.SerializedName("_isClosed")
 	private boolean _isClosed;
 	//private final List<IGeoPoint> _wayPointsList = new ArrayList<IGeoPoint>();
+	@com.google.gson.annotations.SerializedName("_wayPoints")
 	private IGeoPoint[] _wayPoints;
+	@com.google.gson.annotations.SerializedName("_guidancePoints")
 	private GuidancePoint[] _guidancePoints;
+	@com.google.gson.annotations.SerializedName("_totalDistance")
+	private double _totalDistance;
+	@com.google.gson.annotations.SerializedName("_totalTime")
+	private double _totalTime;
 	
 	public Route(){		
 	}
 	
-	public Route(String key, String name, String description, boolean isClosed, IGeoPoint[] wayPoints, GuidancePoint[] guidancePoints){
+	public Route(String key, String name, String description, boolean isClosed, IGeoPoint[] wayPoints, GuidancePoint[] guidancePoints, double totalDistance, double totalTime){
 		_key = key;
 		_name = name;
 		_description = description;
 		_isClosed = isClosed;
 		_wayPoints = wayPoints;
 		_guidancePoints = guidancePoints;
+		_totalDistance = totalDistance;
+		_totalTime = totalTime;
 	}
 	
 	/**
@@ -66,12 +78,7 @@ public class Route {
 	 * @return Lista de los puntos de la ruta 
 	 */
 	public List<IGeoPoint> getWayPoints() {
-		//return _wayPointsList;
-		
-		ArrayList<IGeoPoint> wayPoints = new ArrayList<IGeoPoint>();
-		wayPoints.addAll(Arrays.asList(_wayPoints));
-		
-		return wayPoints;
+		return Arrays.asList(_wayPoints);
 	}
 
 	/**
@@ -108,5 +115,28 @@ public class Route {
 	public GuidancePoint[] getGuidancePoints(){
 		return _guidancePoints;
 	}
-	
+
+	public void setWayPoints(IGeoPoint[] wayPoints) {
+		this._wayPoints = wayPoints;
+	}
+
+	public void setGuidancePoints(GuidancePoint[] guidancePoints) {
+		this._guidancePoints = guidancePoints;
+	}
+
+	public double getTotalDistance() {
+		return _totalDistance;
+	}
+
+	public void setTotalDistance(double totalDistance) {
+		this._totalDistance = totalDistance;
+	}
+
+	public double getTotalTime() {
+		return _totalTime;
+	}
+
+	public void setTotalTime(double totalTime) {
+		this._totalTime = totalTime;
+	}
 }

@@ -16,4 +16,18 @@
     <string name="mainNotificationChannelDescription">Canal usado para permitir la ubicación mientras la app está en segundo plano.</string>
     <string name="app_info.close_battery_info_button.text">Entendido</string>
     <string name="app_info.no_show_on_startup.text">No mostrar al inicio</string>
+    <string name="editRoute">Editar ruta</string>
+    <string name="createRoute">Crear nueva ruta</string>
+    <string name="defaultNewRouteName">Nueva ruta</string>
+    <string name="finishEditingRoute">Terminar de editar</string>
+    <string name="saveChangesTitle">Guardar cambios</string>
+    <string name="saveChangesMessage">¿Quieres guardar las modificaciones realizadas en la ruta?</string>
+    <string name="saveOptionOriginal">Guardar en original</string>
+    <string name="saveOptionNew">Crear nuevo archivo</string>
+    <string name="saveOptionCancel">Salir sin guardar</string>
+    <string name="newFileNameTitle">Nombre del nuevo archivo</string>
+    <string name="saveError">Error al guardar la ruta</string>
+    <string name="saveSuccess">Ruta guardada correctamente</string>
+    <string name="routeNotSaved">Los cambios no se han guardado</string>
+    <string name="closeRouteMenuItemLabel">Cerrar ruta</string>
 </resources>
