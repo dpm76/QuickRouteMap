@@ -166,6 +166,10 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         _mapOverlayManager.add(_myLocationOverlay);
 
         _guidanceManager = GuidanceManager.getInstance();
+        _currentRoute = _guidanceManager.getCurrentRoute();
+        if (_currentRoute != null) {
+            showRoute();
+        }
 
         checkPermissions();
 
@@ -255,7 +259,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         clear();
         _currentRoute = null;
         _currentRouteUri = null;
-        _guidanceManager.setCurrentRouteGuidance(null);
+        _guidanceManager.setCurrentRoute(null);
         _mapView.invalidate();
         invalidateOptionsMenu();
     }
@@ -271,7 +275,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
 
         try {
             _currentRoute = _routeSerializer.fromJson(reader, Route.class);
-            _guidanceManager.setCurrentRouteGuidance(_currentRoute.getGuidancePoints());
+            _guidanceManager.setCurrentRoute(_currentRoute);
 
             showRoute();
 
@@ -415,7 +419,7 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
         } else {
             // Actualizar los puntos de guiado en el gestor de proximidad al terminar de
             // editar
-            _guidanceManager.setCurrentRouteGuidance(_currentRoute.getGuidancePoints());
+            _guidanceManager.setCurrentRoute(_currentRoute);
         }
     }
 
