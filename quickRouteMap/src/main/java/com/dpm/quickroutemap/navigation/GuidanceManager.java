@@ -2,7 +2,7 @@ package com.dpm.quickroutemap.navigation;
 
 public class GuidanceManager implements IGuidanceProvider{
 
-    private GuidancePoint[] _route;
+    private Route _route;
     private IGuidanceConsumer _consumer;
 
     private static GuidanceManager _instance = null;
@@ -20,15 +20,29 @@ public class GuidanceManager implements IGuidanceProvider{
         _consumer = consumer;
     }
 
-    public void setCurrentRouteGuidance(GuidancePoint[] routeGuidance) {
-        _route = routeGuidance;
+    public void setCurrentRoute(Route route) {
+        _route = route;
         if (_consumer != null){
-            _consumer.setCurrentRouteGuidance(_route);
+            _consumer.setCurrentRouteGuidance(_route != null ? _route.getGuidancePoints() : null);
+        }
+    }
+
+    public Route getCurrentRoute() {
+        return _route;
+    }
+
+    public void setCurrentRouteGuidance(GuidancePoint[] routeGuidance) {
+        if (_route == null) {
+            _route = new Route();
+        }
+        _route.setGuidancePoints(routeGuidance);
+        if (_consumer != null){
+            _consumer.setCurrentRouteGuidance(routeGuidance);
         }
     }
 
     @Override
     public GuidancePoint[] getCurrentRouteGuidance() {
-        return _route;
+        return _route != null ? _route.getGuidancePoints() : null;
     }
 }
