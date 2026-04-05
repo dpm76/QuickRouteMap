@@ -17,7 +17,13 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ListAdapter;
+import android.widget.TextView;
 import android.widget.Toast;
+import android.graphics.Color;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -424,15 +430,37 @@ public final class QuickRouteMapActivity extends Activity implements IGuidancePr
     }
 
     private void showSaveOptionsDialog(final RouteOverlay overlay) {
-        String[] options = {
+        final boolean canSaveToOriginal = _currentRouteUri != null;
+        final String[] options = {
                 getString(R.string.saveOptionOriginal),
                 getString(R.string.saveOptionNew),
                 getString(R.string.saveOptionCancel)
         };
 
+        ListAdapter adapter = new ArrayAdapter<String>(this, android.R.layout.select_dialog_item, options) {
+            @Override
+            public boolean isEnabled(int position) {
+                if (position == 0) {
+                    return canSaveToOriginal;
+                }
+                return true;
+            }
+
+            @NonNull
+            @Override
+            public View getView(int position, View convertView, @NonNull ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                TextView textView = view.findViewById(android.R.id.text1);
+                boolean isItemEnabled = isEnabled(position);
+                view.setEnabled(isItemEnabled);
+                textView.setAlpha(isItemEnabled ? 1.0f : 0.5f);
+                return view;
+            }
+        };
+
         new AlertDialog.Builder(this)
                 .setTitle(R.string.saveChangesTitle)
-                .setItems(options, (dialog, which) -> {
+                .setAdapter(adapter, (dialog, which) -> {
                     switch (which) {
                         case 0: // Save to original
                             saveRoute(_currentRouteUri);

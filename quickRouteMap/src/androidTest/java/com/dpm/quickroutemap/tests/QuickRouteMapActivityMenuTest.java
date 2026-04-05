@@ -155,6 +155,34 @@ public class QuickRouteMapActivityMenuTest {
         try { Thread.sleep(ms); } catch (InterruptedException ignored) {}
     }
 
+    @Test
+    public void saveToOriginal_Disabled_ForNewRoute() {
+        preparePreferences();
+        try (androidx.test.core.app.ActivityScenario<QuickRouteMapActivity> scenario =
+                     androidx.test.core.app.ActivityScenario.launch(QuickRouteMapActivity.class)) {
+            sleep(2000);
+
+            // 1. Initial state: Create new route
+            clickMenuItem(R.string.createRoute);
+            sleep(1000);
+
+            // 2. Finish editing
+            clickMenuItem(R.string.finishEditingRoute);
+            sleep(1000);
+
+            // 3. Verify dialog title is shown
+            onView(withText(R.string.saveChangesTitle)).check(matches(isDisplayed()));
+
+            // 4. Verify "Save to original" is DISABLED
+            // Note: withText(R.string.saveOptionOriginal) matches the text in the AlertDialog's ListView
+            onView(withText(R.string.saveOptionOriginal)).check(matches(not(isEnabled())));
+
+            // 5. Verify "Create new file" and "Cancel" are ENABLED
+            onView(withText(R.string.saveOptionNew)).check(matches(isEnabled()));
+            onView(withText(R.string.saveOptionCancel)).check(matches(isEnabled()));
+        }
+    }
+
     private void assertMenuTitleExists(int resourceId) {
         try {
             // Try visible first
